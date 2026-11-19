@@ -1,0 +1,190 @@
+:root {
+  --bg: #e7e5e4;
+  --panel: #fafaf9;
+  --border: #d6d3d1;
+  --text: #1c1917;
+  --muted: #57534e;
+  --accent: #2563eb;
+  --accent-soft: #dbeafe;
+  --danger: #b91c1c;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  color: var(--text);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1917;
+    --panel: #292524;
+    --border: #44403c;
+    --text: #f5f5f4;
+    --muted: #a8a29e;
+    --accent: #60a5fa;
+    --accent-soft: #1e3a5f;
+    --danger: #f87171;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+body {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: var(--bg);
+  /* Evita o "pull to refresh" e o zoom da página no celular enquanto se desenha. */
+  overscroll-behavior: none;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  align-items: center;
+  padding: 8px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+.group {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+button,
+select {
+  font: inherit;
+  font-size: 13px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  min-height: 34px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+button[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+
+.swatch {
+  width: 30px;
+  min-height: 30px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--c);
+  border: 2px solid var(--panel);
+  box-shadow: 0 0 0 1px var(--border);
+}
+
+.swatch[aria-pressed="true"],
+.swatch[aria-pressed="true"]:hover {
+  background: var(--c);
+  box-shadow: 0 0 0 2px var(--accent);
+}
+
+.width input {
+  width: 100px;
+}
+
+.width output {
+  min-width: 2.5em;
+  color: var(--text);
+}
+
+.check {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  margin-right: 4px;
+}
+
+#page-label {
+  min-width: 3.5em;
+  text-align: center;
+  color: var(--text);
+}
+
+#surface {
+  position: relative;
+  min-height: 0;
+}
+
+.status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+  padding: 6px 16px;
+  font-size: 12px;
+  color: var(--muted);
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+}
+
+.status .hint {
+  margin-left: auto;
+}
+
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 48px;
+  transform: translateX(-50%);
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 13px;
+  white-space: pre-line;
+  box-shadow: 0 6px 20px rgb(0 0 0 / 0.25);
+}
+
+@media (max-width: 640px) {
+  /* Uma linha com rolagem horizontal: a área de escrita não pode encolher no celular. */
+  .toolbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 10px;
+    padding: 6px 10px;
+    scrollbar-width: none;
+  }
+  .group {
+    flex: none;
+  }
+  .status .hint {
+    display: none;
+  }
+}

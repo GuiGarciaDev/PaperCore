@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "noEmit": true,
+    "paths": {
+      "papercore": ["./src/index.ts"]
+    }
+  },
+  "include": ["src", "tests", "playground", "*.config.ts"],
+  "exclude": ["playground/vite.config.ts", "playground/dist"]
+}

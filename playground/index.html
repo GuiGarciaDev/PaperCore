@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="color-scheme" content="light dark" />
+    <title>PaperCore Playground</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="toolbar" role="toolbar" aria-label="Ferramentas">
+      <div class="group" role="group" aria-label="Ferramenta">
+        <button type="button" data-tool="pen" aria-pressed="true" title="Caneta">✏️ Caneta</button>
+        <button type="button" data-tool="pan" aria-pressed="false" title="Mover">✋ Mover</button>
+      </div>
+
+      <div class="group" role="group" aria-label="Cor">
+        <button
+          type="button"
+          class="swatch"
+          data-color="#1f2937"
+          aria-label="Preto"
+          style="--c: #1f2937"
+        ></button>
+        <button
+          type="button"
+          class="swatch"
+          data-color="#2563eb"
+          aria-label="Azul"
+          style="--c: #2563eb"
+        ></button>
+        <button
+          type="button"
+          class="swatch"
+          data-color="#dc2626"
+          aria-label="Vermelho"
+          style="--c: #dc2626"
+        ></button>
+        <button
+          type="button"
+          class="swatch"
+          data-color="#16a34a"
+          aria-label="Verde"
+          style="--c: #16a34a"
+        ></button>
+      </div>
+
+      <label class="group width">
+        <span>Espessura</span>
+        <input id="width" type="range" min="0.5" max="12" step="0.5" value="3" />
+        <output id="width-value">3</output>
+      </label>
+
+      <div class="group" role="group" aria-label="Histórico">
+        <button type="button" id="undo" title="Desfazer (Ctrl+Z)">↶ Desfazer</button>
+        <button type="button" id="redo" title="Refazer (Ctrl+Shift+Z)">↷ Refazer</button>
+        <button type="button" id="clear" title="Limpar página">Limpar</button>
+      </div>
+
+      <label class="group">
+        <span>Fundo</span>
+        <select id="background">
+          <option value="ruled">Pautado</option>
+          <option value="grid">Quadriculado</option>
+          <option value="blank">Branco</option>
+        </select>
+      </label>
+
+      <div class="group" role="group" aria-label="Páginas">
+        <button type="button" id="prev" aria-label="Página anterior">◀</button>
+        <span id="page-label" aria-live="polite">1 / 1</span>
+        <button type="button" id="next" aria-label="Próxima página">▶</button>
+        <button type="button" id="add-page">+ Página</button>
+        <button type="button" id="duplicate-page">Duplicar</button>
+        <button type="button" id="delete-page">Excluir</button>
+      </div>
+
+      <div class="group" role="group" aria-label="Zoom">
+        <button type="button" id="zoom-out" aria-label="Diminuir zoom">−</button>
+        <button type="button" id="zoom-reset" title="Voltar ao início">100%</button>
+        <button type="button" id="zoom-in" aria-label="Aumentar zoom">+</button>
+      </div>
+
+      <div class="group" role="group" aria-label="Arquivo">
+        <label class="check"><input type="checkbox" id="readonly" /> Somente leitura</label>
+        <button type="button" id="export">Exportar</button>
+        <button type="button" id="import">Importar</button>
+        <input type="file" id="import-file" accept="application/json,.json" hidden />
+      </div>
+    </header>
+
+    <main id="surface" aria-label="Caderno"></main>
+
+    <footer class="status" aria-live="polite">
+      <span id="stats">—</span>
+      <span id="input-info">Ponteiro: —</span>
+      <span id="change-info">Última alteração: —</span>
+      <span class="hint"
+        >Roda: rolar · Ctrl+roda/pinça: zoom · botão do meio: mover · persistência local: Etapa 6</span
+      >
+    </footer>
+
+    <div id="toast" role="alert" hidden></div>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

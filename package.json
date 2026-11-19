@@ -1,0 +1,46 @@
+{
+  "name": "papercore",
+  "version": "0.0.0",
+  "description": "Motor de desenho vetorial para cadernos digitais na web: páginas, caneta com pressão, histórico por operações e renderização em Canvas 2D.",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite --config playground/vite.config.ts",
+    "dev:lan": "vite --config playground/vite.config.ts --mode lan --host",
+    "build": "tsc -p tsconfig.build.json",
+    "build:watch": "tsc -p tsconfig.build.json --watch",
+    "build:playground": "vite build --config playground/vite.config.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p tsconfig.core.json --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "check": "npm run typecheck && npm run lint && npm run test && npm run build"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@vitejs/plugin-basic-ssl": "^2.3.0",
+    "eslint": "^10.15.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.10.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.73.0",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
+  }
+}
