@@ -8,7 +8,14 @@ export default defineConfig(({ mode }) => ({
   root: fileURLToPath(new URL(".", import.meta.url)),
   base: "./",
   resolve: {
-    alias: { papercore: fileURLToPath(new URL("../src/index.ts", import.meta.url)) },
+    alias: [
+      // A ordem importa: o subpath antes do pacote raiz.
+      {
+        find: /^papercore\/storage$/,
+        replacement: fileURLToPath(new URL("../src/storage/index.ts", import.meta.url)),
+      },
+      { find: /^papercore$/, replacement: fileURLToPath(new URL("../src/index.ts", import.meta.url)) },
+    ],
   },
   plugins: mode === "lan" ? [basicSsl()] : [],
   server: { port: 5173 },

@@ -11,7 +11,7 @@ export default defineConfig(
   tseslint.configs.recommended,
   prettier,
   {
-    files: ["**/*.ts"],
+    files: ["**/*.{ts,tsx}"],
     rules: {
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/consistent-type-imports": "error",
@@ -47,6 +47,38 @@ export default defineConfig(
             {
               group: ["**/interaction/**", "**/storage/**", "**/react/**", "**/engine*"],
               message: `A renderização só pode depender do core. ${layerMessage}`,
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/storage/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/rendering/**", "**/interaction/**", "**/react/**", "**/engine*"],
+              message: `O storage só pode depender do core. ${layerMessage}`,
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ["src/react/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/core/**", "**/rendering/**", "**/interaction/**", "**/storage/**", "**/engine*"],
+              message: `A camada React só usa a API pública (../index.js). ${layerMessage}`,
             },
           ],
         },

@@ -90,6 +90,8 @@ export interface PaperCore {
   duplicatePage(pageId?: string): string;
   /** Exclui a página (não pode ser desfeito). Peça confirmação ao usuário antes. */
   deletePage(pageId?: string): void;
+  /** Move a página para `toIndex` (limitado ao intervalo válido). A página ativa não muda. */
+  movePage(pageId: string, toIndex: number): void;
   setPageBackground(background: PageBackground, pageId?: string): void;
   /** Remove todos os traços da página (pode ser desfeito). */
   clearPage(pageId?: string): void;
@@ -260,12 +262,23 @@ class Engine implements PaperCore {
     this.assertAlive();
     const pages = this.store.getDocument().pages;
     const index = pages.findIndex((p) => p.id === pageId);
-    if (pageId === this.activePageId) this.controller.cancelActive();
-    this.store.deletePage(pageId);
-    if (pageId === this.activePageId) {
-      const remaining = this.store.getDocument().pages;
-      this.setActivePageInternal(remaining[Math.min(index, remaining.length - 1)]!.id);
+    if (index < 0) this.store.getPage(pageId); // lança PAGE_NOT_FOUND
+    if (pageId !== this.activePageId || pages.length <= 1) {
+      this.store.deletePage(pageId); // a última página: o store lança o erro
+      return;
     }
+    // Ativa a vizinha ANTES de excluir: o evento "change" já sai com a página ativa correta.
+    this.controller.cancelActive();
+    const neighbor = pages[index + 1] ?? pages[index - 1]!;
+    this.setActivePageInternal(neighbor.id);
+    this.store.deletePage(pageId);
+  }
+
+  movePage(pageId: string, toIndex: number): void {
+    this.assertAlive();
+    if (!Number.isInteger(toIndex))
+      throw new PaperCoreError("INVALID_ARGUMENT", "A posição da página deve ser um inteiro.");
+    this.store.movePage(pageId, toIndex);
   }
 
   setPageBackground(background: PageBackground, pageId = this.activePageId): void {

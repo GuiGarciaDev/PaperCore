@@ -28,6 +28,20 @@ describe("PaperStore", () => {
     expect(store.getPage(firstPageId).elements).toEqual([s]);
   });
 
+  it("quem ouve change já vê o histórico atualizado (canUndo/canRedo)", () => {
+    const { store, firstPageId, draw } = setup();
+    const seen: [boolean, boolean][] = [];
+    store.on("change", () => seen.push([store.canUndo(firstPageId), store.canRedo(firstPageId)]));
+    draw();
+    store.undo(firstPageId);
+    store.redo(firstPageId);
+    expect(seen).toEqual([
+      [true, false],
+      [false, true],
+      [true, false],
+    ]);
+  });
+
   it("uma nova ação descarta o redo", () => {
     const { store, firstPageId, draw } = setup();
     draw();

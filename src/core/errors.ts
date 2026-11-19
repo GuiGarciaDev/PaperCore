@@ -8,7 +8,11 @@ export type PaperCoreErrorCode =
   | "LAST_PAGE"
   | "LIMIT_EXCEEDED"
   | "INVALID_ARGUMENT"
-  | "INCONSISTENT_OPERATION";
+  | "INCONSISTENT_OPERATION"
+  | "STORAGE_UNAVAILABLE"
+  | "STORAGE_QUOTA_EXCEEDED"
+  | "STORAGE_CORRUPTED"
+  | "STORAGE_ERROR";
 
 /** Erro padronizado do PaperCore. Use `code` para tratar casos específicos. */
 export class PaperCoreError extends Error {

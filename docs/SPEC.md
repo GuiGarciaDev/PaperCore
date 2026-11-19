@@ -33,12 +33,13 @@ src/
 ├── core/          modelo, validação, migrações, serialização, operações, histórico, store, geometria
 ├── rendering/     viewport (transformações), camadas de canvas, fundos, traços
 ├── interaction/   normalização de entrada, política de ponteiros, ferramentas, controlador de ponteiros
-├── storage/       (Etapa 6) interface de adaptador, IndexedDB, memória, autosave
-├── react/         (Etapa 7) <DrawingSurface> e hooks
+├── storage/       interface de adaptador, IndexedDB, memória, autosave
+├── react/         <DrawingSurface> e hooks
 ├── engine.ts      cola as camadas: createPaperCore(container, options)
 └── index.ts       API pública
 playground/        app de demonstração (não é publicado)
-tests/             testes unitários (Vitest)
+tests/             testes unitários (Vitest; engine e React em happy-dom)
+e2e/               testes de ponta a ponta no playground (Playwright)
 ```
 
 Regras de dependência (ADR-0002):
@@ -53,8 +54,8 @@ Regras de dependência (ADR-0002):
 
 As regras são aplicadas pelo ESLint (`no-restricted-imports`) e pelo `npm run typecheck`.
 
-**Subpaths do pacote** (`exports`): `papercore` (core e engine), `papercore/storage` (Etapa 6) e
-`papercore/react` (Etapa 7). React será `peerDependency` **opcional**: quem não usa React não o instala.
+**Subpaths do pacote** (`exports`): `papercore` (core e engine), `papercore/storage` e
+`papercore/react`. React será `peerDependency` **opcional**: quem não usa React não o instala.
 
 ## 4. Modelo de documento (schema v1)
 

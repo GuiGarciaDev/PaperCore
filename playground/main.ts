@@ -5,6 +5,7 @@ import {
   type BackgroundType,
   type ToolName,
 } from "papercore";
+import { createAutosave, IndexedDbStorageAdapter, type AutosaveState } from "papercore/storage";
 
 const $ = <T extends HTMLElement>(selector: string) => {
   const el = document.querySelector<T>(selector);
@@ -12,7 +13,33 @@ const $ = <T extends HTMLElement>(selector: string) => {
   return el;
 };
 
-const engine = createPaperCore($("#surface"), { keyboardShortcuts: true });
+// ── Persistência local (IndexedDB) ─────────────────────────────────────────
+// O playground guarda um único documento: o último salvo é reaberto ao recarregar a página.
+const storage = new IndexedDbStorageAdapter({ databaseName: "papercore-playground" });
+let startupError: unknown = null;
+async function loadLastDocument() {
+  try {
+    const [lastId] = await storage.list();
+    return lastId ? await storage.load(lastId) : null;
+  } catch (error) {
+    startupError = error;
+    return null;
+  }
+}
+const savedDocument = await loadLastDocument();
+
+const engine = createPaperCore($("#surface"), {
+  keyboardShortcuts: true,
+  document: savedDocument ?? undefined,
+});
+const autosave = createAutosave(engine, storage);
+
+/** Grava o documento atual inteiro e remove os anteriores (o playground mantém só um). */
+async function persistCurrentDocument() {
+  await autosave.saveAll();
+  const currentId = engine.getDocument().id;
+  for (const id of await storage.list()) if (id !== currentId) await storage.deleteDocument(id);
+}
 
 // Exposto só no playground, para depurar pelo console do navegador.
 (window as unknown as { paper: typeof engine }).paper = engine;
@@ -171,6 +198,7 @@ fileInput.addEventListener("change", async () => {
   if (!file) return;
   try {
     engine.importJSON(await file.text());
+    await persistCurrentDocument();
   } catch (error) {
     showError(error);
   }
@@ -240,5 +268,31 @@ engine.on("input", (sample) => {
     (engine.getState().penDetected ? " · caneta detectada (palma ignorada)" : "");
 });
 
+// ── Indicador de salvamento ────────────────────────────────────────────────
+const SAVE_LABELS: Record<AutosaveState["status"], string> = {
+  idle: "Salvo localmente",
+  dirty: "Alterações pendentes",
+  saving: "Salvando…",
+  saved: "Salvo localmente",
+  error: "Erro ao salvar — tentando de novo",
+};
+function renderSave(state: AutosaveState) {
+  const info = $("#save-info");
+  info.dataset.state = state.status === "idle" ? "saved" : state.status;
+  info.textContent = SAVE_LABELS[state.status];
+  info.title = state.lastSavedAt
+    ? `Último salvamento: ${new Date(state.lastSavedAt).toLocaleTimeString()}`
+    : "";
+}
+autosave.on("state", (state) => {
+  renderSave(state);
+  if (state.status === "error") showError(state.error);
+});
+
 render();
 renderStats();
+renderSave(autosave.getState());
+
+if (startupError) showError(startupError);
+// Documento novo (primeira visita ou armazenamento ilegível): primeiro salvamento completo.
+if (!savedDocument) persistCurrentDocument().catch(showError);

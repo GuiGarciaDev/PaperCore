@@ -96,8 +96,8 @@ export class PaperStore {
       const result = validateElement(element, page.size, this.limits);
       if (!result.ok) throw new PaperCoreError("INVALID_ARGUMENT", "Elemento inválido.", result.errors);
     }
-    this.commit(op, "user");
-    this.history.record(op);
+    // O histórico é gravado ANTES do evento: quem ouve "change" já vê canUndo atualizado.
+    this.commit(op, "user", () => this.history.record(op));
   }
 
   undo(pageId: string): boolean {
@@ -225,7 +225,8 @@ export class PaperStore {
     this.history.clear();
   }
 
-  private commit(op: ElementOperation, reason: ChangeReason): void {
+  /** Aplica a operação; `beforeEmit` roda depois da validação e antes do evento "change". */
+  private commit(op: ElementOperation, reason: ChangeReason, beforeEmit?: () => void): void {
     const page = this.getPage(op.pageId);
     const elements = applyToElements(page.elements, op);
     if (elements.length > this.limits.maxElementsPerPage) {
@@ -235,6 +236,7 @@ export class PaperStore {
       );
     }
     this.replacePage({ ...page, elements });
+    beforeEmit?.();
     this.emit({ reason, changedPageIds: [op.pageId] });
   }
 

@@ -4,9 +4,11 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "noEmit": true,
     "paths": {
-      "papercore": ["./src/index.ts"]
+      "papercore": ["./src/index.ts"],
+      "papercore/storage": ["./src/storage/index.ts"],
+      "papercore/react": ["./src/react/index.ts"]
     }
   },
-  "include": ["src", "tests", "playground", "*.config.ts"],
+  "include": ["src", "tests", "e2e", "playground", "*.config.ts"],
   "exclude": ["playground/vite.config.ts", "playground/dist"]
 }
