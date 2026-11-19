@@ -2,37 +2,55 @@ import type { StrokeGeometry } from "../core/geometry/strokeOutline.js";
 import { strokeOutline } from "../core/geometry/strokeOutline.js";
 import type { StrokeElement } from "../core/types.js";
 
-/** Path2D por elemento. Elementos são imutáveis, então a WeakMap nunca fica desatualizada. */
-const pathCache = new WeakMap<StrokeElement, Path2D>();
+/**
+ * Caminhos de um traço. O contorno e os reforços das juntas ficam em Path2D SEPARADOS e são
+ * preenchidos em chamadas separadas: no mesmo caminho, com a regra "nonzero", um círculo de
+ * junta com sentido de giro oposto ao do contorno (comum em curvas fechadas de traços grossos)
+ * cancela o preenchimento e vira um buraco. A tinta é opaca, então pintar duas vezes não muda
+ * a cor.
+ */
+export interface StrokePaths {
+  readonly outline: Path2D;
+  /** Todos os círculos de junta (mesmo sentido de giro entre si). `null` se não houver. */
+  readonly joints: Path2D | null;
+}
 
-export function geometryToPath(geometry: StrokeGeometry): Path2D {
-  const path = new Path2D();
+/** Elementos são imutáveis, então a WeakMap nunca fica desatualizada. */
+const pathCache = new WeakMap<StrokeElement, StrokePaths>();
+
+export function geometryToPaths(geometry: StrokeGeometry): StrokePaths {
+  const outline = new Path2D();
+  let joints: Path2D | null = null;
   if (geometry.kind === "dot") {
     const { x, y, r } = geometry.circle;
-    path.arc(x, y, r, 0, Math.PI * 2);
+    outline.arc(x, y, r, 0, Math.PI * 2);
   } else if (geometry.kind === "polygon") {
     const o = geometry.outline;
-    path.moveTo(o[0]!, o[1]!);
-    for (let i = 2; i < o.length; i += 2) path.lineTo(o[i]!, o[i + 1]!);
-    path.closePath();
-    for (const { x, y, r } of geometry.joints) {
-      path.moveTo(x + r, y);
-      path.arc(x, y, r, 0, Math.PI * 2);
+    outline.moveTo(o[0]!, o[1]!);
+    for (let i = 2; i < o.length; i += 2) outline.lineTo(o[i]!, o[i + 1]!);
+    outline.closePath();
+    if (geometry.joints.length > 0) {
+      joints = new Path2D();
+      for (const { x, y, r } of geometry.joints) {
+        joints.moveTo(x + r, y);
+        joints.arc(x, y, r, 0, Math.PI * 2);
+      }
     }
   }
-  return path;
+  return { outline, joints };
 }
 
-export function strokePath(element: StrokeElement): Path2D {
-  let path = pathCache.get(element);
-  if (!path) {
-    path = geometryToPath(strokeOutline(element.points, element.style.width, element.hasPressure));
-    pathCache.set(element, path);
+export function strokePaths(element: StrokeElement): StrokePaths {
+  let paths = pathCache.get(element);
+  if (!paths) {
+    paths = geometryToPaths(strokeOutline(element.points, element.style.width, element.hasPressure));
+    pathCache.set(element, paths);
   }
-  return path;
+  return paths;
 }
 
-export function fillPath(ctx: CanvasRenderingContext2D, path: Path2D, color: string): void {
+export function fillStroke(ctx: CanvasRenderingContext2D, paths: StrokePaths, color: string): void {
   ctx.fillStyle = color;
-  ctx.fill(path, "nonzero");
+  ctx.fill(paths.outline, "nonzero");
+  if (paths.joints) ctx.fill(paths.joints, "nonzero");
 }

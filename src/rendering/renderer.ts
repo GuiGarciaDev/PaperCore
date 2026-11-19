@@ -3,7 +3,7 @@ import type { StrokeGeometry } from "../core/geometry/strokeOutline.js";
 import type { PaperPage } from "../core/types.js";
 import { backgroundLines } from "./backgrounds.js";
 import type { CanvasLayers, LayerSize } from "./canvasLayers.js";
-import { fillPath, geometryToPath, strokePath } from "./strokeRenderer.js";
+import { fillStroke, geometryToPaths, strokePaths } from "./strokeRenderer.js";
 import { visibleRect, type ViewTransform } from "./viewport.js";
 
 export interface LiveStroke {
@@ -11,11 +11,24 @@ export interface LiveStroke {
   readonly color: string;
 }
 
-export interface RendererTheme {
-  readonly pageShadow: string;
+/** Círculo da borracha, em coordenadas lógicas. */
+export interface EraserCursor {
+  readonly x: number;
+  readonly y: number;
+  readonly radius: number;
 }
 
-const DEFAULT_THEME: RendererTheme = { pageShadow: "rgba(15, 23, 42, 0.18)" };
+export interface RendererTheme {
+  readonly pageShadow: string;
+  readonly eraserStroke: string;
+  readonly eraserFill: string;
+}
+
+const DEFAULT_THEME: RendererTheme = {
+  pageShadow: "rgba(15, 23, 42, 0.18)",
+  eraserStroke: "rgba(71, 85, 105, 0.9)",
+  eraserFill: "rgba(148, 163, 184, 0.15)",
+};
 
 /**
  * Desenha a página ativa nas três camadas. Cada camada só é redesenhada quando fica "suja",
@@ -26,6 +39,7 @@ export class Renderer {
   private transform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
   private size: LayerSize = { width: 0, height: 0, pixelRatio: 1 };
   private live: LiveStroke | null = null;
+  private cursor: EraserCursor | null = null;
   private dirty = { background: true, content: true, live: true };
   private frame: number | null = null;
   private destroyed = false;
@@ -57,6 +71,12 @@ export class Renderer {
 
   setLiveStroke(live: LiveStroke | null): void {
     this.live = live;
+    this.dirty.live = true;
+    this.schedule();
+  }
+
+  setEraserCursor(cursor: EraserCursor | null): void {
+    this.cursor = cursor;
     this.dirty.live = true;
     this.schedule();
   }
@@ -144,7 +164,7 @@ export class Renderer {
     let drawn = 0;
     for (const element of page.elements) {
       if (!rectsIntersect(elementBounds(element), visible)) continue;
-      fillPath(ctx, strokePath(element), element.style.color);
+      fillStroke(ctx, strokePaths(element), element.style.color);
       drawn++;
     }
     ctx.restore();
@@ -155,7 +175,19 @@ export class Renderer {
     this.stats.liveDraws++;
     const ctx = this.layers.contexts.live;
     this.prepare(ctx);
-    if (!this.live || this.live.geometry.kind === "empty") return;
-    fillPath(ctx, geometryToPath(this.live.geometry), this.live.color);
+    if (this.live && this.live.geometry.kind !== "empty") {
+      fillStroke(ctx, geometryToPaths(this.live.geometry), this.live.color);
+    }
+    if (this.cursor) {
+      const { x, y, radius } = this.cursor;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fillStyle = this.theme.eraserFill;
+      ctx.fill();
+      // Contorno com 1 pixel de tela em qualquer zoom.
+      ctx.lineWidth = 1 / this.transform.scale;
+      ctx.strokeStyle = this.theme.eraserStroke;
+      ctx.stroke();
+    }
   }
 }

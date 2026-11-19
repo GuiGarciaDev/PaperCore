@@ -1,4 +1,10 @@
-import { clamp, DEFAULT_PEN_STYLE, HEX_COLOR_PATTERN, type PartialLimits } from "./core/config.js";
+import {
+  clamp,
+  DEFAULT_ERASER_SIZE,
+  DEFAULT_PEN_STYLE,
+  HEX_COLOR_PATTERN,
+  type PartialLimits,
+} from "./core/config.js";
 import { createDocument } from "./core/document.js";
 import { Emitter } from "./core/emitter.js";
 import { PaperCoreError } from "./core/errors.js";
@@ -8,6 +14,7 @@ import type { PageBackground, PaperDocument, StrokeStyle } from "./core/types.js
 import type { InputSample, PointerKind } from "./interaction/input.js";
 import { PointerController, type PinchUpdate, type WheelUpdate } from "./interaction/pointerController.js";
 import { PointerPolicy, type InputPolicyOptions } from "./interaction/pointerPolicy.js";
+import { EraserTool } from "./interaction/tools/eraserTool.js";
 import { PanTool } from "./interaction/tools/panTool.js";
 import { PenTool } from "./interaction/tools/penTool.js";
 import type { Tool, ToolContext, ToolName } from "./interaction/tools/types.js";
@@ -37,6 +44,8 @@ export interface PaperCoreOptions {
   keyboardShortcuts?: boolean;
   tool?: ToolName;
   pen?: Partial<StrokeStyle>;
+  /** Diâmetro da borracha em pixels de tela. */
+  eraserSize?: number;
   viewport?: Partial<ViewportConfig>;
 }
 
@@ -47,6 +56,7 @@ export interface EngineState {
   readonly pageCount: number;
   readonly tool: ToolName;
   readonly pen: StrokeStyle;
+  readonly eraserSize: number;
   readonly zoom: number;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
@@ -86,6 +96,8 @@ export interface PaperCore {
 
   setTool(tool: ToolName): void;
   setPenStyle(style: Partial<StrokeStyle>): void;
+  /** Diâmetro da borracha em pixels de tela (limitado por `limits.eraserSize`). */
+  setEraserSize(size: number): void;
   undo(): boolean;
   redo(): boolean;
 
@@ -103,6 +115,8 @@ export interface PaperCore {
 }
 
 const ZOOM_STEP = 1.25;
+/** `PointerEvent.button` da ponta de borracha de canetas digitais. */
+const PEN_ERASER_BUTTON = 5;
 const WHEEL_ZOOM_SENSITIVITY = 0.0015;
 
 /** Cria o motor dentro de `container` (que precisa ter tamanho definido pelo CSS). */
@@ -124,6 +138,7 @@ class Engine implements PaperCore {
   private activePageId: string;
   private tool: ToolName;
   private pen: StrokeStyle;
+  private eraserSize: number;
   private viewport: ViewportState = { zoom: 1, centerX: 0, centerY: 0 };
   private transform: ViewTransform = { scale: 1, offsetX: 0, offsetY: 0 };
   private size: LayerSize = { width: 0, height: 0, pixelRatio: 1 };
@@ -140,6 +155,7 @@ class Engine implements PaperCore {
     this.activePageId = this.store.getDocument().pages[0]!.id;
     this.tool = options.tool ?? "pen";
     this.pen = this.normalizePen({ ...DEFAULT_PEN_STYLE, ...options.pen });
+    this.eraserSize = this.normalizeEraserSize(options.eraserSize ?? DEFAULT_ERASER_SIZE);
     this.policy = new PointerPolicy(options.input);
     this.keyboardShortcuts = options.keyboardShortcuts ?? false;
 
@@ -148,14 +164,16 @@ class Engine implements PaperCore {
       limits: this.store.limits,
       getActivePageId: () => this.activePageId,
       getTransform: () => this.transform,
-      getSettings: () => ({ pen: this.pen }),
+      getSettings: () => ({ pen: this.pen, eraserSize: this.eraserSize }),
       setLiveStroke: (live) => this.renderer.setLiveStroke(live),
+      setPreviewPage: (page) => this.renderer.setPage(page ?? this.store.getPage(this.activePageId)),
+      setEraserCursor: (cursor) => this.renderer.setEraserCursor(cursor),
       panBy: (dx, dy) =>
         this.applyViewport(
           panBy(this.viewport, dx, dy, this.metrics(), this.zoomRange(), this.viewportConfig),
         ),
     };
-    this.tools = { pen: new PenTool(ctx), pan: new PanTool(ctx) };
+    this.tools = { pen: new PenTool(ctx), eraser: new EraserTool(ctx), pan: new PanTool(ctx) };
 
     this.layers = new CanvasLayers(container, (size) => this.onResize(size));
     this.renderer = new Renderer(this.layers);
@@ -277,6 +295,12 @@ class Engine implements PaperCore {
     this.refreshState();
   }
 
+  setEraserSize(size: number): void {
+    this.assertAlive();
+    this.eraserSize = this.normalizeEraserSize(size);
+    this.refreshState();
+  }
+
   undo(): boolean {
     this.assertAlive();
     if (!this.store.canUndo(this.activePageId)) return false;
@@ -344,9 +368,12 @@ class Engine implements PaperCore {
   private resolveTool(kind: PointerKind, button: number): Tool | null {
     if (button === 2) return null; // botão direito
     if (button === 1) return this.tools.pan; // botão do meio
-    if (button > 2) return null; // botões extras / borracha da caneta (futuro)
-    if (this.store.isReadOnly()) return this.tools.pan;
-    if (this.tool === "pen" && !this.policy.canDraw(kind)) return this.tools.pan;
+    if (this.store.isReadOnly()) return button > 2 ? null : this.tools.pan;
+    // Ponta traseira das canetas (Surface/Wacom) chega como pointerType "pen" e botão 5.
+    if (kind === "pen" && button === PEN_ERASER_BUTTON) return this.tools.eraser;
+    if (button > 2) return null; // botões extras do mouse
+    const editing = this.tool === "pen" || this.tool === "eraser";
+    if (editing && !this.policy.canDraw(kind)) return this.tools.pan;
     return this.tools[this.tool];
   }
 
@@ -460,6 +487,11 @@ class Engine implements PaperCore {
     return { color: style.color.toLowerCase(), width: clamp(style.width, this.store.limits.penWidth) };
   }
 
+  private normalizeEraserSize(size: number): number {
+    if (!Number.isFinite(size)) throw new PaperCoreError("INVALID_ARGUMENT", "Tamanho de borracha inválido.");
+    return clamp(size, this.store.limits.eraserSize);
+  }
+
   private buildState(): EngineState {
     const pages = this.store.getDocument().pages;
     return {
@@ -468,6 +500,7 @@ class Engine implements PaperCore {
       pageCount: pages.length,
       tool: this.tool,
       pen: this.pen,
+      eraserSize: this.eraserSize,
       zoom: this.viewport.zoom,
       canUndo: this.store.canUndo(this.activePageId),
       canRedo: this.store.canRedo(this.activePageId),

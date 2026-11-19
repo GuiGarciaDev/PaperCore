@@ -4,7 +4,8 @@ Motor de desenho vetorial para **cadernos digitais** na web: escrita à mão com
 pressão, páginas com fundo pautado ou quadriculado, histórico por operações e renderização em Canvas 2D.
 O core não depende de React nem de DOM.
 
-> Status: **Etapas 1 a 3 de 7** (fundação, renderização, caneta). Veja o [plano](docs/SPEC.md#16-etapas).
+> Status: **Etapas 1 a 4 de 7** (fundação, renderização, caneta, borracha que corta traços). Veja o
+> [plano](docs/SPEC.md#16-etapas).
 
 ## Testar no navegador
 

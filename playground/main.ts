@@ -32,6 +32,21 @@ function showError(error: unknown) {
   window.clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => (toast.hidden = true), 5000);
 }
+// ── Confirmação (substitui o confirm() nativo, que pode estar bloqueado) ───
+const confirmDialog = $<HTMLDialogElement>("#confirm-dialog");
+function askConfirm(message: string, confirmLabel: string): Promise<boolean> {
+  $("#confirm-message").textContent = message;
+  $("#confirm-ok").textContent = confirmLabel;
+  confirmDialog.returnValue = "";
+  confirmDialog.showModal();
+  return new Promise((resolve) => {
+    // "close" dispara ao clicar em um botão e também com Esc (returnValue vazio = cancelado).
+    confirmDialog.addEventListener("close", () => resolve(confirmDialog.returnValue === "ok"), {
+      once: true,
+    });
+  });
+}
+
 const guard = (fn: () => void) => () => {
   try {
     fn();
@@ -55,6 +70,11 @@ document.querySelectorAll<HTMLButtonElement>("[data-color]").forEach((button) =>
   );
 });
 const widthInput = $<HTMLInputElement>("#width");
+const eraserInput = $<HTMLInputElement>("#eraser-size");
+eraserInput.addEventListener(
+  "input",
+  guard(() => engine.setEraserSize(Number(eraserInput.value))),
+);
 widthInput.addEventListener(
   "input",
   guard(() => engine.setPenStyle({ width: Number(widthInput.value) })),
@@ -68,12 +88,11 @@ $("#redo").addEventListener(
   "click",
   guard(() => engine.redo()),
 );
-$("#clear").addEventListener(
-  "click",
-  guard(() => {
-    if (confirm("Limpar todos os traços desta página? (pode ser desfeito)")) engine.clearPage();
-  }),
-);
+$("#clear").addEventListener("click", async () => {
+  if (await askConfirm("Limpar todos os traços desta página? Você pode desfazer depois.", "Limpar")) {
+    guard(() => engine.clearPage())();
+  }
+});
 
 // ── Páginas e fundo ────────────────────────────────────────────────────────
 const pageIds = () => engine.getDocument().pages.map((p) => p.id);
@@ -100,12 +119,11 @@ $("#duplicate-page").addEventListener(
   "click",
   guard(() => engine.duplicatePage()),
 );
-$("#delete-page").addEventListener(
-  "click",
-  guard(() => {
-    if (confirm("Excluir esta página? Essa ação não pode ser desfeita.")) engine.deletePage();
-  }),
-);
+$("#delete-page").addEventListener("click", async () => {
+  if (await askConfirm("Excluir esta página? Essa ação não pode ser desfeita.", "Excluir")) {
+    guard(() => engine.deletePage())();
+  }
+});
 const backgroundSelect = $<HTMLSelectElement>("#background");
 backgroundSelect.addEventListener(
   "change",
@@ -172,6 +190,8 @@ function render() {
   });
   widthInput.value = String(state.pen.width);
   $("#width-value").textContent = String(state.pen.width);
+  eraserInput.value = String(state.eraserSize);
+  $("#eraser-size-value").textContent = String(state.eraserSize);
   ($("#undo") as HTMLButtonElement).disabled = !state.canUndo;
   ($("#redo") as HTMLButtonElement).disabled = !state.canRedo;
   ($("#prev") as HTMLButtonElement).disabled = state.activePageIndex === 0;

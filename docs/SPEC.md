@@ -205,12 +205,17 @@ Pode ser alterado em tempo de execução (`engine.setReadOnly(true)`).
 
 ## 10. Ferramentas
 
-MVP: `pen`, `pan` e `eraser` (Etapa 4). Configurações centralizadas, com limites em `DEFAULT_LIMITS`:
+MVP: `pen`, `eraser` e `pan`. Configurações centralizadas, com limites em `DEFAULT_LIMITS`:
 
 - Caneta: cor (`#rrggbb`) e espessura (unidades lógicas).
-- Borracha: tamanho em **pixels de tela**, para ter a mesma sensação em qualquer zoom. A colisão
-  considera o raio da borracha somado ao raio do traço. Pedaços com menos de 2 pontos são descartados, e
-  as pontas criadas pelo corte não são afinadas.
+- Borracha (ADR-0010): tamanho em **pixels de tela**, para ter a mesma sensação em qualquer zoom. A
+  colisão considera o raio da borracha somado ao raio do traço. Segmentos longos perto da borracha são
+  subdivididos, para o corte não arrancar mais tinta do que a borracha tocou. Pedaços com menos de 2
+  pontos são descartados, e as pontas criadas pelo corte não são afinadas. Durante o gesto o efeito
+  aparece numa pré-visualização (o store não muda). Ao soltar, vira **um** `REPLACE_ELEMENTS`.
+- A ponta traseira de canetas digitais (`pointerType: "pen"`, `button: 5`) apaga com qualquer
+  ferramenta ativa.
+- API: `setTool("pen" | "eraser" | "pan")`, `setPenStyle`, `setEraserSize`, e `state.eraserSize`.
 
 ## 11. Persistência (Etapa 6, ADR-0008)
 

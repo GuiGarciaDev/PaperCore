@@ -1,40 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { resolveLimits, type PartialLimits } from "../../src/core/config.js";
-import { createDocument } from "../../src/core/document.js";
-import { PaperStore } from "../../src/core/store.js";
-import type { StrokeElement } from "../../src/core/types.js";
-import {
-  normalizePressure,
-  toInputSample,
-  type InputSample,
-  type PointerKind,
-} from "../../src/interaction/input.js";
+import type { PartialLimits } from "../../src/core/config.js";
+import { normalizePressure, toInputSample } from "../../src/interaction/input.js";
 import { PointerPolicy } from "../../src/interaction/pointerPolicy.js";
 import { PanTool } from "../../src/interaction/tools/panTool.js";
 import { PenTool } from "../../src/interaction/tools/penTool.js";
-import type { ToolContext } from "../../src/interaction/tools/types.js";
-import type { LiveStroke } from "../../src/rendering/renderer.js";
-
-function sample(x: number, y: number, kind: PointerKind = "mouse", pressure = 0.5): InputSample {
-  return { screenX: x, screenY: y, x, y, ...normalizePressure(kind, pressure), kind, time: 0 };
-}
+import { sample, setupTool } from "./toolContext.js";
 
 function setup(limits?: PartialLimits) {
-  const store = new PaperStore(createDocument(), { limits });
-  const pageId = store.getDocument().pages[0]!.id;
-  const live: (LiveStroke | null)[] = [];
-  const pans: [number, number][] = [];
-  const ctx: ToolContext = {
-    store,
-    limits: resolveLimits(limits),
-    getActivePageId: () => pageId,
-    getTransform: () => ({ scale: 1, offsetX: 0, offsetY: 0 }),
-    getSettings: () => ({ pen: { color: "#ff0000", width: 4 } }),
-    setLiveStroke: (l) => live.push(l),
-    panBy: (dx, dy) => pans.push([dx, dy]),
-  };
-  const strokes = () => store.getPage(pageId).elements as StrokeElement[];
-  return { store, pageId, ctx, live, pans, strokes, pen: new PenTool(ctx) };
+  const tool = setupTool({ limits });
+  return { ...tool, pen: new PenTool(tool.ctx) };
 }
 
 describe("caneta", () => {
