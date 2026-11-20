@@ -4,17 +4,22 @@
 [![Live demo](https://img.shields.io/badge/demo-live-2563eb)](https://guigarciadev.github.io/PaperCore/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-16a34a)](LICENSE)
 
-**A small vector drawing engine for the web, built from scratch as a learning project.** Handwriting
+**A small vector drawing engine for the web, built from scratch as an engineering and learning project.** Handwriting
 with pressure-sensitive pens, multi-page documents with ruled or grid paper, an eraser that cuts
 strokes instead of deleting them, per-page undo/redo, pluggable persistence with autosave and a React
 binding, rendered with Canvas 2D and written in strict TypeScript with zero runtime dependencies.
 
-**[▶ Try the live demo](https://guigarciadev.github.io/PaperCore/)** (works with a mouse, a finger or a stylus; the notebook is saved
-in your browser).
+**[▶ Try the live demo](https://guigarciadev.github.io/PaperCore/)** (works with a mouse, a finger or a stylus; your notebook is
+saved automatically in your browser).
+
+> **Not yet published to npm.** PaperCore is currently available for local development and testing.
+> Installation through npm will be supported after the first public release. Until then, the
+> `papercore` imports in the examples work when the package is linked locally, as described in
+> [Using it from another project](#using-it-from-another-project).
 
 ![PaperCore playground: a notebook page with pressure-sensitive strokes](.github/media/screenshot-light.png)
 
-```
+```text
 papercore           core engine (framework-agnostic, DOM only where it must be)
 papercore/storage   storage adapters (IndexedDB, in-memory) and autosave
 papercore/react     <DrawingSurface>, useDrawingEngine, useEngineState
@@ -53,6 +58,7 @@ papercore/react     <DrawingSurface>, useDrawingEngine, useEngineState
 - [Bugs worth telling](#bugs-worth-telling)
 - [Limits](#limits)
 - [Scripts](#scripts)
+- [Current limitations](#current-limitations)
 - [Roadmap](#roadmap)
 
 ---
@@ -153,8 +159,8 @@ explained in depth under [Technical decisions](#technical-decisions).
 **Input**
 
 - Pointer Events with pointer capture, coalesced events and `touch-action: none`.
-- Only one pointer draws at a time. Palm rejection is on by default, and which pointer kinds may
-  draw is configurable.
+- Only one pointer draws at a time. Palm rejection is on by default (it can be turned off), and which
+  pointer kinds may draw is configurable.
 - Two-finger pinch zooms and pans; a second finger cancels a finger stroke.
 - A cancelled pointer discards the stroke; losing capture or window focus commits it, so ink is never
   lost.
@@ -165,7 +171,7 @@ explained in depth under [Technical decisions](#technical-decisions).
 
 - Pen with color and width in logical units, so ink scales with zoom like paper.
 - An eraser that cuts strokes, sized in screen pixels, with a live preview and one undo step per
-  gesture. The back end of a digital pen erases with any tool.
+  gesture. The eraser end of a digital pen erases with any tool.
 - Pan tool, which is also what editing tools become in read-only mode.
 
 **Persistence**
@@ -232,7 +238,12 @@ stages, automated gates and human review.
 
 ## Quick start
 
+**Prerequisites:** Node.js 20 or later and npm. The end-to-end tests also need Google Chrome
+installed, because Playwright drives the local Chrome instead of downloading its own browser.
+
 ```bash
+git clone https://github.com/GuiGarciaDev/PaperCore.git
+cd PaperCore
 npm install
 npm run dev          # playground at http://localhost:5173
 ```
@@ -252,19 +263,25 @@ required because some APIs (such as `crypto.randomUUID`) only exist in secure co
 
 ## Usage
 
+The examples below use the package's three entry points: `papercore`, `papercore/storage` and
+`papercore/react`. Until the npm release, link the package locally first (see
+[Using it from another project](#using-it-from-another-project)).
+
 ### Engine
 
 ```ts
 import { createPaperCore } from "papercore";
 
-const engine = createPaperCore(document.querySelector("#notebook")!, {
-  document: savedDocument, // optional; a new ruled page otherwise
-  keyboardShortcuts: true, // Ctrl/⌘+Z only while the surface has focus
+const container = document.querySelector<HTMLElement>("#notebook")!;
+const engine = createPaperCore(container, {
+  // document: a PaperDocument to open; without it, a new document with one ruled page
+  keyboardShortcuts: true, // Ctrl/⌘+Z, Ctrl/⌘+Shift+Z and Ctrl/⌘+Y, only while the surface has focus
 });
 
 engine.on("change", (change) => {
-  // change.reason: "user" | "undo" | "redo" | "load"
-  // change.changedPageIds / addedPageIds / deletedPageIds: persist only those
+  // reason: "user" | "undo" | "redo" | "load"
+  // changedPageIds / addedPageIds / deletedPageIds: the pages to persist
+  console.log(change.reason, change.changedPageIds);
 });
 
 engine.setPenStyle({ color: "#2563eb", width: 4 });
@@ -280,21 +297,27 @@ The container needs a size from CSS. The engine creates and manages its canvases
 ### Persistence
 
 ```ts
+import { createPaperCore } from "papercore";
 import { createAutosave, IndexedDbStorageAdapter } from "papercore/storage";
 
+const container = document.querySelector<HTMLElement>("#notebook")!;
 const storage = new IndexedDbStorageAdapter();
-const saved = await storage.load(documentId); // null if it does not exist
+const [lastId] = await storage.list(); // ids of the stored documents
+const saved = lastId ? await storage.load(lastId) : null; // null if nothing is stored
+
 const engine = createPaperCore(container, { document: saved ?? undefined });
 const autosave = createAutosave(engine, storage); // debounced, dirty pages only
-if (!saved) await autosave.saveAll(); // first save
+if (!saved) await autosave.saveAll(); // a new document is only written once it changes, so save it now
 
-autosave.on("state", ({ status }) => showIndicator(status)); // idle | dirty | saving | saved | error
+autosave.on("state", ({ status }) => console.log(status)); // idle | dirty | saving | saved | error
 await autosave.flush(); // e.g. before navigating away
 ```
 
 ### React
 
 ```tsx
+import { useState } from "react";
+import type { PaperCore } from "papercore";
 import { DrawingSurface, useEngineState } from "papercore/react";
 
 function Notebook() {
@@ -305,24 +328,33 @@ function Notebook() {
       <button disabled={!state?.canUndo} onClick={() => engine?.undo()}>
         Undo
       </button>
-      <DrawingSurface options={{ keyboardShortcuts: true }} onEngine={setEngine} />
+      <DrawingSurface
+        options={{ keyboardShortcuts: true }}
+        onEngine={setEngine}
+        style={{ height: "80vh" }} // the surface fills its parent by default; it needs a real height
+      />
     </>
   );
 }
 ```
 
-React is an **optional** peer dependency: only `papercore/react` needs it.
+React is an **optional** peer dependency: only `papercore/react` needs it. `useDrawingEngine(options)`
+is also exported for apps that want to render their own container: it returns a callback `ref` and
+the `engine`.
 
-### Consuming it locally from another project
+### Using it from another project
+
+Until the npm release, clone this repository next to your app and point a `file:` dependency at it:
 
 ```jsonc
-// consumer package.json
+// your app's package.json
 "dependencies": { "papercore": "file:../PaperCore" }
 ```
 
-Run `npm run build:watch` here. In the consumer's Vite config, set
-`resolve.dedupe: ["react", "react-dom"]`. npm installs a `file:` dependency as a symlink, so without
-dedupe the app can load two copies of React ("Invalid hook call").
+The consumer imports the compiled `dist/` folder, so run `npm run build` (or `npm run build:watch`
+while you develop) in the PaperCore folder. If your app uses Vite and React, also set
+`resolve.dedupe: ["react", "react-dom"]` in its Vite config: npm installs a `file:` dependency as a
+symlink, so without dedupe the app can load two copies of React ("Invalid hook call").
 
 ## Architecture
 
@@ -347,6 +379,26 @@ flowchart LR
   react --> engine
 ```
 
+What each layer does:
+
+- **Core** (`src/core`): the framework-independent heart of the engine. The document model,
+  validation, migrations and JSON serialization; the operations, per-page history and the store
+  that applies them; and the pure geometry for stroke outlines and for the cutting eraser. It has no
+  DOM access.
+- **Rendering** (`src/rendering`): the viewport math (zoom, pan, screen ↔ logical coordinates), the
+  three stacked canvases sized to the device pixel ratio, ruled and grid backgrounds, and turning
+  strokes into cached `Path2D` objects. It redraws at most once per animation frame.
+- **Interaction** (`src/interaction`): converts Pointer Events into normalized input samples,
+  decides which pointer may draw (palm rejection), recognizes pinch and wheel gestures, and holds the
+  pen, eraser and pan tools.
+- **Engine** (`src/engine.ts`): `createPaperCore()` wires the layers together and owns the
+  lifecycle: pages, tools, zoom, read-only mode, keyboard shortcuts, events and `destroy()`.
+- **Storage** (`papercore/storage`): the `StorageAdapter` interface, IndexedDB and in-memory
+  adapters, and the autosave. It splits a document into per-page records and reassembles it; the
+  JSON format itself lives in the core.
+- **React** (`papercore/react`): the optional `<DrawingSurface>` component and the
+  `useDrawingEngine` and `useEngineState` hooks, built only on the public API.
+
 Layer boundaries are **enforced by tooling, not by discipline**:
 
 - `core` is compiled by a second tsconfig (`tsconfig.core.json`) **without the DOM lib**. Any
@@ -358,7 +410,7 @@ Layer boundaries are **enforced by tooling, not by discipline**:
   `src/react/index.ts`). Internal classes such as the store, renderer and pointer controller are not
   exported.
 
-```
+```text
 src/core/          document model, validation, migrations, operations, history, store, geometry
 src/rendering/     viewport math, canvas layers, backgrounds, stroke paths
 src/interaction/   input normalization, pointer policy, pen / eraser / pan tools, pointer controller
@@ -473,14 +525,15 @@ During capture, points closer than ~0.75 screen px to the previous one are dropp
 
 ### 5. Input, palm rejection and gestures
 
-- DOM pointer events are normalized into a pure `InputSample { x, y, pressure, hasPressure, kind,
-time }`. Tools only consume samples, so they are unit-tested without a browser, including
-  simulated pen pressure, which Playwright cannot reproduce well.
+- DOM pointer events are normalized into a pure
+  `InputSample { x, y, pressure, hasPressure, kind, time }`. Tools only consume samples, so they are
+  unit-tested without a browser, including simulated pen pressure, which Playwright cannot reproduce
+  well.
 - Pointer Events with `setPointerCapture`, `getCoalescedEvents()` when available (full pen
   resolution at high report rates) and `touch-action: none`.
 - **Only one pointer draws at a time.** **Palm rejection is on by default**: once a `pen` pointer has
-  been seen, touch switches to pan and pinch. Which pointer kinds may draw is configurable
-  (`drawWith`).
+  been seen, touch switches to pan and pinch. Both are configurable through `options.input`
+  (`palmRejection` and `drawWith`).
 - Two-finger **pinch** zooms and pans. A second finger during a finger stroke cancels that stroke.
 - `pointercancel` **discards** the stroke, because the browser took over the gesture.
   `lostpointercapture` without `pointerup`, and window `blur`, **commit** it, so ink is never lost.
@@ -507,8 +560,8 @@ was touched** and keeps the document vector.
   the copy and emits **one** `REPLACE_ELEMENTS` for the whole gesture. Pieces created and erased
   within the same gesture never show up in it. One undo restores everything in its original layer.
 - Eraser size is in **screen pixels** (logical radius = `size / 2 / scale`), so it feels the same at
-  any zoom. The back end of digital pens (`pointerType: "pen"`, `button: 5`) erases without switching
-  tools.
+  any zoom. The eraser end of digital pens (`pointerType: "pen"`, `button: 5`) erases without
+  switching tools.
 
 ### 7. Persistence and autosave
 
@@ -582,22 +635,27 @@ stateDiagram-v2
 - Internal imports use `.js` extensions (`moduleResolution: NodeNext`), so `dist/` works both in
   bundlers and in Node.
 - `exports` exposes `.`, `./storage` and `./react`. `sideEffects: false`. No module touches `window`
-  or `document` at import time, verified by importing all three subpaths from the built package in
-  Node.
+  or `document` at import time, so all three subpaths can be imported in Node or during SSR (checked
+  by importing them from the built package in plain Node).
 
 ## Testing strategy
 
-| Layer       | Tool                         | What it covers                                                                                                                                          |
-| ----------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Core        | Vitest, plain Node           | Validation, migrations, serialization round-trip, operation apply/invert, per-page history, store events, stroke geometry, eraser geometry and sessions |
-| Rendering   | Vitest                       | Viewport math (screen ↔ logical, clamping, zoom around a point); fill strategy with a recording fake `Path2D`                                           |
-| Interaction | Vitest                       | Pen and eraser tools driven by synthetic `InputSample`s, including pressure and cancellation                                                            |
-| Engine      | Vitest + happy-dom           | Pages, active-page rules, read-only mode, change events, idempotent destroy (canvas is stubbed: state, not pixels)                                      |
-| Storage     | Vitest + fake-indexeddb      | Both adapters against the same contract suite; autosave with fake timers (debounce, maxWait, races, retries, flush, page hide)                          |
-| React       | Vitest + happy-dom           | StrictMode lifecycle, unmount cleanup, `useEngineState` re-renders                                                                                      |
-| End-to-end  | Playwright, installed Chrome | Draw/undo/redo, eraser cutting, persistence across reload, pages with confirmation dialog, read-only, a pixel-level regression check for stroke holes   |
+The suite has three levels: **unit tests** for pure modules, **integration tests** that run several
+layers together in a simulated DOM, and **end-to-end tests** in a real browser.
 
-`npm run check` runs both typechecks (full project and DOM-free core), lint, unit tests and the build.
+| Level       | Layer       | Tool                         | What it covers                                                                                                                                          |
+| ----------- | ----------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit        | Core        | Vitest, plain Node           | Validation, migrations, serialization round-trip, operation apply/invert, per-page history, store events, stroke geometry, eraser geometry and sessions |
+| Unit        | Rendering   | Vitest                       | Viewport math (screen ↔ logical, clamping, zoom around a point); fill strategy with a recording fake `Path2D`                                           |
+| Unit        | Interaction | Vitest                       | Pen and eraser tools driven by synthetic `InputSample`s, including pressure and cancellation                                                            |
+| Integration | Engine      | Vitest + happy-dom           | Pages, active-page rules, read-only mode, change events, idempotent destroy (canvas is stubbed: state, not pixels)                                      |
+| Integration | Storage     | Vitest + fake-indexeddb      | Both adapters against the same contract suite; autosave with fake timers (debounce, maxWait, races, retries, flush, page hide)                          |
+| Integration | React       | Vitest + happy-dom           | StrictMode lifecycle, unmount cleanup, `useEngineState` re-renders                                                                                      |
+| End-to-end  | Playground  | Playwright, installed Chrome | Draw/undo/redo, eraser cutting, persistence across reload, pages with confirmation dialog, read-only, a pixel-level regression check for stroke holes   |
+
+`npm test` runs the unit and integration tests (155) and `npm run test:e2e` the end-to-end tests (6;
+it starts the playground on its own). `npm run check` runs both typechecks (full project and DOM-free
+core), lint, the Vitest suite and the build. CI runs `npm run check` on every push and pull request.
 
 ## Bugs worth telling
 
@@ -624,12 +682,14 @@ All limits live in `core/config.ts` and can be overridden through `options.limit
 | Pages per document                                          | 200                     |
 | Elements per page                                           | 5,000                   |
 | Points per stroke (longer strokes continue as a new stroke) | 4,000                   |
-| Import size                                                 | 20 MB (characters)      |
+| Import size                                                 | 20 MiB of JSON text     |
 | History operations per page                                 | 200                     |
 | Zoom                                                        | 0.25× to 8×             |
 | Pen width                                                   | 0.5 to 40 logical units |
 | Eraser size                                                 | 4 to 120 screen px      |
 | Page size                                                   | 100 to 10,000 units     |
+| Background line spacing                                     | 4 to 400 units          |
+| Background line width                                       | 0.25 to 10 units        |
 
 ## Scripts
 
@@ -644,6 +704,23 @@ All limits live in `core/config.ts` and can be overridden through `options.limit
 | `npm run build`       | Emits `dist/` (ESM + `.d.ts`)                                        |
 | `npm run build:watch` | Continuous build, for local linking                                  |
 | `npm run check`       | All of the above except e2e, in sequence                             |
+
+## Current limitations
+
+What PaperCore does **not** do today:
+
+- **Strokes are the only element type.** There is no text, shapes, images, selection or lasso.
+- **Ink is opaque.** Colors are `#rrggbb` only, so there is no highlighter or transparency.
+- **Export is JSON only.** There is no PNG, SVG or PDF export.
+- **History lives in memory.** Undo/redo is lost on reload, and page actions (add, delete,
+  duplicate, move, background) cannot be undone.
+- **No page thumbnails or drag-to-reorder UI.** The engine has `movePage()`, but the playground has
+  no UI for it.
+- **Single user.** There is no real-time collaboration or server sync; `saved` means written to the
+  storage adapter.
+- **Browser coverage.** Automated end-to-end tests run only in Chrome. Other browsers, and real pen
+  pressure on tablets, are checked by hand.
+- **Not on npm yet** (see the notice at the top).
 
 ## Roadmap
 
