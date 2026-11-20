@@ -4,10 +4,10 @@ import type { InputSample } from "../input.js";
 import type { Tool, ToolContext } from "./types.js";
 
 /**
- * Borracha que corta traços (ADR-0010).
+ * Eraser that cuts strokes.
  *
- * Durante o gesto o efeito é mostrado numa página de pré-visualização (o store não muda).
- * Ao soltar, o gesto inteiro vira UMA operação `REPLACE_ELEMENTS`, desfeita com um único undo.
+ * During the gesture, the effect is shown on a preview page (the store does not change).
+ * On release, the whole gesture becomes ONE `REPLACE_ELEMENTS` operation, reverted by a single undo.
  */
 export class EraserTool implements Tool {
   readonly name = "eraser" as const;

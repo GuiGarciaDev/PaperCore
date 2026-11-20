@@ -3,14 +3,14 @@ import { DEFAULT_PRESSURE, MIN_PEN_PRESSURE } from "../core/config.js";
 export type PointerKind = "mouse" | "pen" | "touch";
 
 /**
- * Amostra de entrada normalizada (ADR-0007). As ferramentas só consomem isto, então podem ser
- * testadas sem navegador, inclusive simulando pressão de caneta.
+ * Normalized input sample. Tools only consume this, so they can be tested
+ * without a browser, including simulated pen pressure.
  */
 export interface InputSample {
-  /** Posição em pixels CSS relativos ao canto do container. */
+  /** Position in CSS pixels relative to the container's corner. */
   readonly screenX: number;
   readonly screenY: number;
-  /** Posição em coordenadas lógicas da página. */
+  /** Position in the page's logical coordinates. */
   readonly x: number;
   readonly y: number;
   readonly pressure: number;
@@ -19,7 +19,7 @@ export interface InputSample {
   readonly time: number;
 }
 
-/** Subconjunto de PointerEvent que precisamos (permite testar sem DOM). */
+/** The subset of PointerEvent we need (allows testing without a DOM). */
 export interface RawPointer {
   readonly clientX: number;
   readonly clientY: number;
@@ -34,8 +34,8 @@ export function toPointerKind(pointerType: string): PointerKind {
 }
 
 /**
- * Só a caneta tem pressão confiável. Mouse informa 0,5 fixo e touch varia entre navegadores,
- * então os dois são tratados como "sem pressão".
+ * Only pens report reliable pressure. Mice report a fixed 0.5 and touch varies across browsers,
+ * so both are treated as "no pressure".
  */
 export function normalizePressure(
   kind: PointerKind,

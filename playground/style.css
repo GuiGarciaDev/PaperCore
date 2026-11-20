@@ -1,7 +1,7 @@
 /*
- * Playground do PaperCore. Linguagem visual baseada no estudo de UI da Womp:
- * monocromático (escala neutra Radix), Inter / Inter Tight / JetBrains Mono, controles em
- * pílula, superfícies planas e sombras só em elementos flutuantes.
+ * PaperCore playground. Visual language based on a UI study of womp.com:
+ * monochrome (Radix neutral scale), Inter / Inter Tight / JetBrains Mono, pill-shaped
+ * controls, flat surfaces and shadows only on floating elements.
  */
 
 :root {
@@ -102,7 +102,7 @@ body {
   display: grid;
   grid-template-rows: var(--topbar-h) 1fr auto;
   background: var(--color-page);
-  /* Evita o "pull to refresh" e o zoom da página no celular enquanto se desenha. */
+  /* Prevents pull-to-refresh and page zoom on phones while drawing. */
   overscroll-behavior: none;
 }
 
@@ -117,7 +117,7 @@ svg {
   stroke-linejoin: round;
 }
 
-/* ── Tipografia utilitária ──────────────────────────────────────────────── */
+/* ── Utility typography ────────────────────────────────────────────────── */
 .eyebrow {
   font-family: var(--font-mono);
   font-size: 11px;
@@ -127,7 +127,7 @@ svg {
   color: var(--color-muted);
 }
 
-/* ── Controles ──────────────────────────────────────────────────────────── */
+/* ── Controls ──────────────────────────────────────────────────────────── */
 button,
 select {
   font: inherit;
@@ -256,7 +256,7 @@ button:disabled {
   background: var(--color-border);
 }
 
-/* ── Barra superior ─────────────────────────────────────────────────────── */
+/* ── Top bar ──────────────────────────────────────────────────────────── */
 .topbar {
   display: flex;
   align-items: center;
@@ -279,7 +279,7 @@ button:disabled {
   height: 22px;
   border-radius: 7px;
   background: var(--accent-solid);
-  /* Folha com a dobra no canto. */
+  /* A sheet with a folded corner. */
   clip-path: polygon(0 0, 68% 0, 100% 32%, 100% 100%, 0 100%);
 }
 
@@ -327,7 +327,7 @@ button:disabled {
   flex: none;
 }
 
-/* Interruptor "somente leitura". */
+/* Read-only switch. */
 .toggle {
   position: relative;
   display: inline-flex;
@@ -400,7 +400,7 @@ button:disabled {
   height: 16px;
 }
 
-/* ── Palco (área de escrita) ────────────────────────────────────────────── */
+/* ── Stage (writing area) ───────────────────────────────────────────────── */
 .stage {
   position: relative;
   min-height: 0;
@@ -414,7 +414,7 @@ button:disabled {
   background-size: 18px 18px;
 }
 
-/* Doca de ferramentas flutuante. */
+/* Floating tool dock. */
 .dock {
   position: absolute;
   left: 50%;
@@ -572,7 +572,7 @@ input[type="range"]::-moz-range-thumb {
   flex: none;
 }
 
-/* Zoom flutuante no canto. */
+/* Floating zoom control in the corner. */
 .zoom {
   position: absolute;
   right: var(--space-6);
@@ -608,7 +608,7 @@ input[type="range"]::-moz-range-thumb {
   background: var(--neutral-3);
 }
 
-/* ── Rodapé de status ───────────────────────────────────────────────────── */
+/* ── Status footer ─────────────────────────────────────────────────────── */
 .status {
   display: flex;
   flex-wrap: wrap;
@@ -656,7 +656,7 @@ input[type="range"]::-moz-range-thumb {
   background: var(--danger);
 }
 
-/* ── Diálogo e toast ────────────────────────────────────────────────────── */
+/* ── Dialog and toast ───────────────────────────────────────────────────── */
 #confirm-dialog {
   width: min(400px, calc(100vw - 32px));
   padding: var(--space-6);
@@ -703,7 +703,7 @@ input[type="range"]::-moz-range-thumb {
   z-index: 10;
 }
 
-/* ── Responsivo ─────────────────────────────────────────────────────────── */
+/* ── Responsive ─────────────────────────────────────────────────────────── */
 @media (max-width: 1023.98px) {
   .topbar {
     padding: 0 var(--space-4);
@@ -725,7 +725,7 @@ input[type="range"]::-moz-range-thumb {
 }
 
 @media (max-width: 767.98px) {
-  /* Barra superior: só o essencial; o resto rola na horizontal. */
+  /* Top bar: only the essentials; the rest scrolls horizontally. */
   .brand-name {
     display: none;
   }

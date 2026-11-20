@@ -1,5 +1,5 @@
 {
-  "//": "Compila só o core SEM a lib DOM: qualquer uso de window/document/console/Path2D no core quebra o typecheck (ADR-0002).",
+  "//": "Compiles only the core WITHOUT the DOM lib: any use of window/document/console/Path2D in the core breaks the typecheck (ADR-0002).",
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2022"],

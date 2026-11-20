@@ -1,7 +1,7 @@
 {
   "name": "papercore",
   "version": "0.0.0",
-  "description": "Motor de desenho vetorial para cadernos digitais na web: páginas, caneta com pressão, histórico por operações e renderização em Canvas 2D.",
+  "description": "A small vector drawing engine for digital notebooks on the web: pages, pressure-sensitive pen, a cutting eraser, operation-based history, autosave and Canvas 2D rendering.",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -39,7 +39,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "media": "node scripts/media.mjs"
   },
   "peerDependencies": {
     "react": ">=18"
@@ -58,7 +59,9 @@
     "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.8",
     "fake-indexeddb": "^6.2.8",
+    "gifenc": "^1.0.3",
     "happy-dom": "^21.0.4",
+    "pngjs": "^7.0.0",
     "prettier": "^3.10.1",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",

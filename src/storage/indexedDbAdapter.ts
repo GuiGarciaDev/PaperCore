@@ -16,20 +16,20 @@ interface PageRecord {
 }
 
 export interface IndexedDbAdapterOptions {
-  /** Nome do banco. Padrão: `"papercore"`. */
+  /** Database name. Default: `"papercore"`. */
   databaseName?: string;
   limits?: PaperLimits;
-  /** Fábrica do IndexedDB (testes usam `fake-indexeddb`). Padrão: `globalThis.indexedDB`. */
+  /** IndexedDB factory (tests use `fake-indexeddb`). Default: `globalThis.indexedDB`. */
   indexedDB?: IDBFactory;
 }
 
 /**
- * Adaptador IndexedDB. Duas object stores:
- * - `documents` (chave `id`): a meta de cada documento;
- * - `pages` (chave `[documentId, pageId]`, índice `byDocument`): uma entrada por página.
+ * IndexedDB adapter. Two object stores:
+ * - `documents` (key `id`): each document's meta;
+ * - `pages` (key `[documentId, pageId]`, index `byDocument`): one entry per page.
  *
- * `savePages` grava páginas e meta na MESMA transação: ou tudo é gravado, ou nada.
- * O banco só é aberto no primeiro uso, então importar este módulo em SSR é seguro.
+ * `savePages` writes pages and meta in the SAME transaction: either everything is written, or nothing.
+ * The database is only opened on first use, so importing this module during SSR is safe.
  */
 export class IndexedDbStorageAdapter implements StorageAdapter {
   private readonly name: string;
@@ -88,7 +88,7 @@ export class IndexedDbStorageAdapter implements StorageAdapter {
     return keys.map(String);
   }
 
-  /** Fecha a conexão (outra aba pode precisar atualizar o banco). Pode ser reaberta depois. */
+  /** Closes the connection (another tab may need to upgrade the database). It can be reopened later. */
   close(): void {
     const pending = this.dbPromise;
     this.dbPromise = null;
@@ -109,7 +109,7 @@ export class IndexedDbStorageAdapter implements StorageAdapter {
     const factory = this.factory;
     if (!factory) {
       return Promise.reject(
-        new PaperCoreError("STORAGE_UNAVAILABLE", "IndexedDB não está disponível neste ambiente."),
+        new PaperCoreError("STORAGE_UNAVAILABLE", "IndexedDB is not available in this environment."),
       );
     }
     return new Promise((resolve, reject) => {
@@ -124,16 +124,16 @@ export class IndexedDbStorageAdapter implements StorageAdapter {
       };
       req.onsuccess = () => {
         const db = req.result;
-        // Outra aba quer atualizar o esquema: libera a conexão em vez de bloqueá-la.
+        // Another tab wants to upgrade the schema: release the connection instead of blocking it.
         db.onversionchange = () => {
           db.close();
           this.dbPromise = null;
         };
         resolve(db);
       };
-      req.onerror = () => reject(storageError("Não foi possível abrir o IndexedDB.", req.error));
+      req.onerror = () => reject(storageError("Could not open IndexedDB.", req.error));
       req.onblocked = () =>
-        reject(new PaperCoreError("STORAGE_UNAVAILABLE", "O IndexedDB está bloqueado por outra aba."));
+        reject(new PaperCoreError("STORAGE_UNAVAILABLE", "IndexedDB is blocked by another tab."));
     });
   }
 }
@@ -141,22 +141,22 @@ export class IndexedDbStorageAdapter implements StorageAdapter {
 function request<T>(req: IDBRequest): Promise<T> {
   return new Promise((resolve, reject) => {
     req.onsuccess = () => resolve(req.result as T);
-    req.onerror = () => reject(storageError("Falha ao ler do IndexedDB.", req.error));
+    req.onerror = () => reject(storageError("Failed to read from IndexedDB.", req.error));
   });
 }
 
 function done(tx: IDBTransaction): Promise<void> {
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(storageError("Falha ao gravar no IndexedDB.", tx.error));
-    tx.onabort = () => reject(storageError("A gravação no IndexedDB foi abortada.", tx.error));
+    tx.onerror = () => reject(storageError("Failed to write to IndexedDB.", tx.error));
+    tx.onabort = () => reject(storageError("The IndexedDB write was aborted.", tx.error));
   });
 }
 
 function storageError(message: string, cause: DOMException | null): PaperCoreError {
-  // QuotaExceededError: o navegador recusou por falta de espaço.
+  // QuotaExceededError: the browser refused because it ran out of space.
   if (cause?.name === "QuotaExceededError") {
-    return new PaperCoreError("STORAGE_QUOTA_EXCEEDED", "Sem espaço de armazenamento no navegador.");
+    return new PaperCoreError("STORAGE_QUOTA_EXCEEDED", "The browser is out of storage space.");
   }
   return new PaperCoreError("STORAGE_ERROR", message, cause ? [`${cause.name}: ${cause.message}`] : []);
 }

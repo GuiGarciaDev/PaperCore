@@ -6,38 +6,38 @@ import { documentMeta } from "./documentParts.js";
 import type { StorageAdapter } from "./types.js";
 
 /**
- * - `idle`: nada foi alterado desde o início (ou desde o último `load`).
- * - `dirty`: há mudanças esperando o debounce.
- * - `saving`: gravando no adaptador.
- * - `saved`: tudo gravado no adaptador (NÃO significa sincronizado com servidor).
- * - `error`: a última gravação falhou; nova tentativa agendada.
+ * - `idle`: nothing changed since the start (or since the last `load`).
+ * - `dirty`: there are changes waiting for the debounce.
+ * - `saving`: writing to the adapter.
+ * - `saved`: everything written to the adapter (does NOT mean synced with a server).
+ * - `error`: the last write failed; a retry is scheduled.
  */
 export type AutosaveStatus = "idle" | "dirty" | "saving" | "saved" | "error";
 
 export interface AutosaveState {
   readonly status: AutosaveStatus;
-  /** Erro da última tentativa, se `status === "error"`. */
+  /** Error from the last attempt, if `status === "error"`. */
   readonly error: unknown;
-  /** Momento (`Date.now()`) do último salvamento bem-sucedido. */
+  /** Time (`Date.now()`) of the last successful save. */
   readonly lastSavedAt: number | null;
 }
 
-/** O que o autosave precisa da engine (a engine e o `PaperStore` já servem). */
+/** What the autosave needs from the engine (the engine and `PaperStore` both fit). */
 export interface AutosaveSource {
   getDocument(): PaperDocument;
   on(type: "change", listener: (change: DocumentChange) => void): () => void;
 }
 
 export interface AutosaveOptions {
-  /** Espera depois da última mudança (ms). Padrão: 800. */
+  /** Wait after the last change (ms). Default: 800. */
   delay?: number;
-  /** Com mudanças contínuas, salva no máximo depois deste tempo (ms). Padrão: 5000. */
+  /** With continuous changes, save after this time at the latest (ms). Default: 5000. */
   maxWait?: number;
-  /** Primeira espera depois de uma falha; dobra a cada falha, até 30 s. Padrão: 1000. */
+  /** First wait after a failure; doubles on each failure, up to 30 s. Default: 1000. */
   retryDelay?: number;
   /**
-   * Janela para o flush em `visibilitychange`/`pagehide`. Padrão: `globalThis` quando houver
-   * `document`. Passe `null` para desligar.
+   * Window used to flush on `visibilitychange`/`pagehide`. Default: `globalThis` when there is a
+   * `document`. Pass `null` to turn it off.
    */
   window?: Window | null;
 }
@@ -46,17 +46,17 @@ export interface Autosave {
   getState(): AutosaveState;
   on(type: "state", listener: (state: AutosaveState) => void): () => void;
   /**
-   * Grava agora tudo o que mudou até este momento. Rejeita se a gravação falhar.
-   * Use antes de ações que dependem do documento salvo (por exemplo, enviar uma resposta).
+   * Writes everything that changed up to this moment right now. Rejects if the write fails.
+   * Use it before actions that depend on the saved document.
    */
   flush(): Promise<void>;
-  /** Marca o documento inteiro como sujo e grava (para o primeiro salvamento ou após importar). */
+  /** Marks the whole document dirty and writes it (for the first save or after an import). */
   saveAll(): Promise<void>;
-  /** Para de observar. Mudanças ainda não gravadas são descartadas: chame `flush()` antes. */
+  /** Stops observing. Changes not yet written are discarded: call `flush()` first. */
   destroy(): void;
 }
 
-/** Lote de mudanças de um documento. `generation` é a da última mudança incluída. */
+/** A batch of changes to one document. `generation` is the one of the last change included. */
 interface Batch {
   doc: PaperDocument;
   dirty: Set<string>;
@@ -67,13 +67,13 @@ interface Batch {
 const MAX_RETRY_DELAY = 30_000;
 
 /**
- * Autosave por página (ADR-0008). Cada mudança incrementa a "geração". Um salvamento só leva o
- * estado para `saved` se, ao terminar, nenhuma mudança tiver chegado enquanto ele gravava; caso
- * contrário o estado volta para `dirty` e outro salvamento é agendado. Assim nunca aparece
- * `saved` com mudanças pendentes.
+ * Per-page autosave. Every change bumps the "generation". A save only moves the
+ * state to `saved` if no change arrived while it was writing; otherwise the state goes back
+ * to `dirty` and another save is scheduled. So `saved` never shows up with pending
+ * changes.
  *
- * `reason: "load"` não suja o documento. Se houver mudanças pendentes do documento anterior, elas
- * são gravadas antes (o lote guarda o snapshot imutável do documento antigo).
+ * `reason: "load"` does not mark the document dirty. If the previous document has pending changes,
+ * they are written first (the batch keeps the old document's immutable snapshot).
  */
 export function createAutosave(
   source: AutosaveSource,
@@ -158,12 +158,12 @@ class AutosaveController implements Autosave {
     this.emitter.clear();
   }
 
-  // ── Mudanças ─────────────────────────────────────────────────────────────
+  // ── Changes ──────────────────────────────────────────────────────────────
 
   private onChange(change: DocumentChange): void {
     if (this.destroyed) return;
     if (change.reason === "load") {
-      // O documento anterior pode ter mudanças pendentes: grava-as (com o snapshot antigo) já.
+      // The previous document may have pending changes: write them now (with the old snapshot).
       if (this.open) {
         this.seal();
         this.clearTimer();
@@ -182,7 +182,7 @@ class AutosaveController implements Autosave {
       batch.dirty.delete(id);
       batch.deleted.add(id);
     }
-    // Mudança só de ordem: a meta (pageIds) é gravada junto de qualquer lote.
+    // Order-only change: the meta (pageIds) is written with every batch.
     this.bump(batch);
   }
 
@@ -215,7 +215,7 @@ class AutosaveController implements Autosave {
     }, wait);
   }
 
-  /** Fecha o lote aberto e o põe na fila de gravação. */
+  /** Closes the open batch and puts it in the write queue. */
   private seal(): void {
     if (!this.open) return;
     this.queue.push(this.open);
@@ -223,7 +223,7 @@ class AutosaveController implements Autosave {
     this.firstPendingAt = null;
   }
 
-  // ── Gravação ─────────────────────────────────────────────────────────────
+  // ── Writing ──────────────────────────────────────────────────────────────
 
   private run(): Promise<void> {
     this.running ??= this.work().finally(() => {
@@ -240,8 +240,8 @@ class AutosaveController implements Autosave {
         const doc = batch.doc;
         const pages = doc.pages.filter((p) => batch.dirty.has(p.id));
         const savedAt = Date.now();
-        // Meta e páginas primeiro; depois as exclusões. Se o app fechar no meio, a meta já não
-        // lista as páginas excluídas, e o carregamento as ignora.
+        // Meta and pages first; deletions afterwards. If the app closes in between, the meta no
+        // longer lists the deleted pages, and loading ignores them.
         await this.adapter.savePages(doc.id, pages, documentMeta(doc, savedAt));
         if (batch.deleted.size > 0) await this.adapter.deletePages(doc.id, [...batch.deleted]);
         this.queue.splice(0, count);
@@ -250,7 +250,7 @@ class AutosaveController implements Autosave {
         this.state = { ...this.state, lastSavedAt: savedAt };
       } catch (error) {
         if (this.destroyed) return;
-        // Mantém os lotes na fila (já mesclados) e tenta de novo mais tarde.
+        // Keep the batches in the queue (already merged) and try again later.
         this.queue.splice(0, count, batch);
         this.failures += 1;
         this.setState({ status: "error", error: toError(error) });
@@ -263,7 +263,7 @@ class AutosaveController implements Autosave {
     this.setState({ status: pending ? "dirty" : "saved", error: null });
   }
 
-  /** Junta os lotes do início da fila que são do mesmo documento. */
+  /** Merges the batches at the head of the queue that belong to the same document. */
   private mergeHead(): { batch: Batch; count: number } {
     const head = this.queue[0]!;
     const merged: Batch = {
@@ -300,7 +300,7 @@ class AutosaveController implements Autosave {
     }, wait);
   }
 
-  // ── Saída da página ──────────────────────────────────────────────────────
+  // ── Leaving the page ─────────────────────────────────────────────────────
 
   private readonly onLeave = (): void => {
     if (this.destroyed) return;
@@ -313,7 +313,7 @@ class AutosaveController implements Autosave {
     if (this.view?.document.visibilityState === "hidden") this.onLeave();
   };
 
-  // ── Utilidades ───────────────────────────────────────────────────────────
+  // ── Utilities ─────────────────────────────────────────────────────────────
 
   private setState(patch: Partial<AutosaveState>): void {
     const next = { ...this.state, ...patch };
@@ -331,7 +331,7 @@ class AutosaveController implements Autosave {
   }
 
   private assertAlive(): void {
-    if (this.destroyed) throw new PaperCoreError("INVALID_ARGUMENT", "O autosave já foi destruído.");
+    if (this.destroyed) throw new PaperCoreError("INVALID_ARGUMENT", "The autosave was already destroyed.");
   }
 }
 

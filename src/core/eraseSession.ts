@@ -4,11 +4,11 @@ import type { IndexedElement, ReplaceElementsOperation } from "./operations.js";
 import type { PaperElement, PaperPage } from "./types.js";
 
 /**
- * Um gesto contínuo de borracha sobre uma página.
+ * One continuous eraser gesture over a page.
  *
- * Acumula o efeito de várias passadas sobre uma cópia de trabalho (para a pré-visualização) e,
- * no fim, produz UMA operação `REPLACE_ELEMENTS` com os índices corretos (ADR-0004). Pedaços
- * criados e apagados no mesmo gesto nunca aparecem na operação.
+ * Accumulates the effect of several sweeps on a working copy (for the preview) and, at the end,
+ * produces ONE `REPLACE_ELEMENTS` operation with the correct indices. Pieces created
+ * and erased within the same gesture never show up in the operation.
  */
 export class EraseSession {
   private working: PaperElement[];
@@ -21,7 +21,7 @@ export class EraseSession {
     this.working = page.elements.slice();
   }
 
-  /** Aplica uma passada. Devolve `true` se algo foi apagado. */
+  /** Applies a sweep. Returns `true` if anything was erased. */
   sweep(sweep: EraserSweep): boolean {
     const rect = sweepBounds(sweep);
     let changed = false;
@@ -46,7 +46,7 @@ export class EraseSession {
     return changed;
   }
 
-  /** Página com o estado atual do gesto (para a pré-visualização). */
+  /** Page with the current state of the gesture (for the preview). */
   previewPage(): PaperPage {
     return { ...this.page, elements: this.working };
   }
@@ -55,7 +55,7 @@ export class EraseSession {
     return this.touched;
   }
 
-  /** Operação única do gesto, ou `null` se nada mudou. */
+  /** The gesture's single operation, or `null` if nothing changed. */
   toOperation(): ReplaceElementsOperation | null {
     if (!this.touched) return null;
     const originalIds = new Set(this.page.elements.map((e) => e.id));

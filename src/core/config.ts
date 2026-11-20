@@ -6,18 +6,18 @@ export interface Range {
   readonly max: number;
 }
 
-/** Limites centralizados. Todos podem ser sobrescritos via `options.limits`. */
+/** Centralized limits. All of them can be overridden through `options.limits`. */
 export interface PaperLimits {
   readonly maxPages: number;
   readonly maxElementsPerPage: number;
-  /** Quantidade de pontos (não de números) por traço. */
+  /** Number of points (not numbers) per stroke. */
   readonly maxPointsPerStroke: number;
-  /** Tamanho máximo do JSON importado, em caracteres. */
+  /** Maximum size of imported JSON, in characters. */
   readonly maxImportSize: number;
   readonly maxHistoryPerPage: number;
   readonly zoom: Range;
   readonly penWidth: Range;
-  /** Tamanho da borracha em pixels de tela. */
+  /** Eraser size in screen pixels. */
   readonly eraserSize: Range;
   readonly pageSize: Range;
   readonly backgroundSpacing: Range;
@@ -56,13 +56,13 @@ const COUNT_KEYS = [
 
 export type PartialLimits = Partial<PaperLimits>;
 
-/** Mescla limites parciais com os padrões, validando a consistência. */
+/** Merges partial limits with the defaults, checking that they are consistent. */
 export function resolveLimits(partial?: PartialLimits): PaperLimits {
   const merged: PaperLimits = { ...DEFAULT_LIMITS, ...partial };
   for (const key of COUNT_KEYS) {
     const value = merged[key];
     if (!Number.isInteger(value) || value < 1) {
-      throw new PaperCoreError("INVALID_ARGUMENT", `Limite inválido: ${key} deve ser um inteiro ≥ 1.`);
+      throw new PaperCoreError("INVALID_ARGUMENT", `Invalid limit: ${key} must be an integer ≥ 1.`);
     }
   }
   for (const key of RANGE_KEYS) {
@@ -73,7 +73,7 @@ export function resolveLimits(partial?: PartialLimits): PaperLimits {
       range.min <= 0 ||
       range.min > range.max
     ) {
-      throw new PaperCoreError("INVALID_ARGUMENT", `Limite inválido: ${key} precisa de 0 < min ≤ max.`);
+      throw new PaperCoreError("INVALID_ARGUMENT", `Invalid limit: ${key} needs 0 < min ≤ max.`);
     }
   }
   return Object.freeze(merged);
@@ -83,16 +83,16 @@ export function clamp(value: number, range: Range): number {
   return Math.min(range.max, Math.max(range.min, value));
 }
 
-/** Passo do array plano de pontos: x, y, pressão. */
+/** Stride of the flat point array: x, y, pressure. */
 export const POINT_STRIDE = 3;
-/** Quantização das coordenadas e da pressão: 2 casas decimais. */
+/** Quantization of coordinates and pressure: 2 decimal places. */
 export const COORD_PRECISION = 100;
-/** Pressão gravada quando o dispositivo não informa pressão. */
+/** Pressure stored when the device does not report any. */
 export const DEFAULT_PRESSURE = 0.5;
-/** Menor pressão aceita de uma caneta em contato (algumas reportam 0 no primeiro evento). */
+/** Lowest pressure accepted from a pen in contact (some report 0 on the first event). */
 export const MIN_PEN_PRESSURE = 0.05;
 
-/** Proporção próxima do A4 (1 : 1,414). */
+/** Proportion close to A4 (1 : 1.414). */
 export const DEFAULT_PAGE_SIZE: Size = Object.freeze({ width: 1000, height: 1414 });
 
 export const DEFAULT_PEN_STYLE: StrokeStyle = Object.freeze({ color: "#1f2937", width: 3 });

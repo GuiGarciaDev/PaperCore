@@ -1,17 +1,17 @@
-/** Maior área de canvas que o Safari iOS aceita sem deixar o canvas em branco. */
+/** Largest canvas area iOS Safari accepts without rendering a blank canvas. */
 export const MAX_CANVAS_PIXELS = 16_777_216;
 
 export type LayerName = "background" | "content" | "live";
 
 export interface LayerSize {
-  /** Pixels CSS. */
+  /** CSS pixels. */
   readonly width: number;
   readonly height: number;
-  /** DPR efetivo (pode ser menor que o do dispositivo, ver `effectivePixelRatio`). */
+  /** Effective DPR (may be lower than the device's, see `effectivePixelRatio`). */
   readonly pixelRatio: number;
 }
 
-/** Reduz o DPR para que o canvas não ultrapasse `MAX_CANVAS_PIXELS` (ADR-0006). */
+/** Lowers the DPR so the canvas never exceeds `MAX_CANVAS_PIXELS`. */
 export function effectivePixelRatio(width: number, height: number, devicePixelRatio: number): number {
   const dpr = Math.max(1, devicePixelRatio || 1);
   const area = width * height;
@@ -21,8 +21,8 @@ export function effectivePixelRatio(width: number, height: number, devicePixelRa
 }
 
 /**
- * Três canvases empilhados com o tamanho do VIEWPORT (nunca página × zoom).
- * O canvas de cima ("live") recebe os eventos de ponteiro.
+ * Three stacked canvases sized to the VIEWPORT (never page × zoom).
+ * The top canvas ("live") receives the pointer events.
  */
 export class CanvasLayers {
   readonly root: HTMLDivElement;
@@ -70,7 +70,7 @@ export class CanvasLayers {
     const canvases = { background: make("background"), content: make("content"), live: make("live") };
     const ctx = (canvas: HTMLCanvasElement) => {
       const context = canvas.getContext("2d");
-      if (!context) throw new Error("Canvas 2D não suportado neste navegador.");
+      if (!context) throw new Error("Canvas 2D is not supported in this browser.");
       return context;
     };
     this.canvases = canvases;
@@ -90,7 +90,7 @@ export class CanvasLayers {
     return this.size;
   }
 
-  /** Recalcula o tamanho (container e DPR) e redimensiona os canvases se necessário. */
+  /** Re-measures the size (container and DPR) and resizes the canvases when needed. */
   measure(): void {
     if (this.destroyed) return;
     const rect = this.root.getBoundingClientRect();
@@ -109,7 +109,7 @@ export class CanvasLayers {
     this.onResize(this.size);
   }
 
-  /** Mudar a janela de monitor altera o DPR sem redimensionar o elemento. */
+  /** Moving the window to another monitor changes the DPR without resizing the element. */
   private watchDpr(view: Window | null): void {
     if (!view?.matchMedia) return;
     this.dprQuery?.removeEventListener("change", this.onDprChange);

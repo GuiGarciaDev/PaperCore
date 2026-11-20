@@ -11,27 +11,27 @@ function line(n: number, pressure = 0.5): number[] {
 }
 
 describe("strokeOutline", () => {
-  it("devolve vazio sem pontos e um ponto para um toque", () => {
+  it("returns empty without points and a dot for a tap", () => {
     expect(strokeOutline([], 4, false).kind).toBe("empty");
     const dot = strokeOutline([5, 5, 0.5], 4, false);
     expect(dot).toEqual({ kind: "dot", circle: { x: 5, y: 5, r: 2 } });
   });
 
-  it("trata pontos repetidos como um só", () => {
+  it("treats repeated points as one", () => {
     expect(strokeOutline([5, 5, 0.5, 5, 5, 0.5], 4, false).kind).toBe("dot");
   });
 
-  it("gera um contorno cuja largura acompanha o raio", () => {
+  it("produces an outline whose width follows the radius", () => {
     const geometry = strokeOutline(line(10), 10, false);
-    if (geometry.kind !== "polygon") throw new Error("esperado polígono");
+    if (geometry.kind !== "polygon") throw new Error("expected a polygon");
     const ys = geometry.outline.filter((_, i) => i % 2 === 1);
     expect(Math.max(...ys) - Math.min(...ys)).toBeCloseTo(10, 5);
   });
 
-  it("a pressão altera a espessura", () => {
+  it("pressure changes the width", () => {
     const thin = strokeOutline(line(10, 0.1), 10, true);
     const thick = strokeOutline(line(10, 1), 10, true);
-    if (thin.kind !== "polygon" || thick.kind !== "polygon") throw new Error("esperado polígono");
+    if (thin.kind !== "polygon" || thick.kind !== "polygon") throw new Error("expected a polygon");
     const height = (o: readonly number[]) => {
       const ys = o.filter((_, i) => i % 2 === 1);
       return Math.max(...ys) - Math.min(...ys);
@@ -39,30 +39,30 @@ describe("strokeOutline", () => {
     expect(height(thick.outline)).toBeGreaterThan(height(thin.outline) * 2);
   });
 
-  it("produz apenas números finitos mesmo com ida e volta exata", () => {
+  it("produces only finite numbers even for an exact back-and-forth", () => {
     const geometry = strokeOutline([0, 0, 0.5, 10, 0, 0.5, 0, 0, 0.5, 10, 0, 0.5], 4, true);
-    if (geometry.kind !== "polygon") throw new Error("esperado polígono");
+    if (geometry.kind !== "polygon") throw new Error("expected a polygon");
     expect(geometry.outline.every(Number.isFinite)).toBe(true);
   });
 
-  it("adiciona reforço em curvas fechadas", () => {
-    // Volta em U densa, como a captura real produz (pontos a ~2 unidades).
+  it("adds reinforcement on tight curves", () => {
+    // Dense U-turn, as real capture produces (points ~2 units apart).
     const hairpin: number[] = [];
     for (let x = 0; x <= 50; x += 2) hairpin.push(x, 0, 0.5);
     for (let x = 50; x >= 0; x -= 2) hairpin.push(x, 3, 0.5);
     const geometry = strokeOutline(hairpin, 4, false);
-    if (geometry.kind !== "polygon") throw new Error("esperado polígono");
+    if (geometry.kind !== "polygon") throw new Error("expected a polygon");
     expect(geometry.joints.length).toBeGreaterThan(0);
   });
 });
 
-describe("bounds e pressão", () => {
-  it("pressão 0,5 equivale à espessura nominal", () => {
+describe("bounds and pressure", () => {
+  it("pressure 0.5 equals the nominal width", () => {
     expect(radiusAt(10, true, 0.5)).toBeCloseTo(5);
     expect(radiusAt(10, false, 0.9)).toBe(5);
   });
 
-  it("inclui a espessura na bounding box", () => {
+  it("includes the width in the bounding box", () => {
     const rect = computeStrokeBounds([10, 10, 0.5, 20, 30, 0.5], 4, false);
     expect(rect).toEqual({ minX: 8, minY: 8, maxX: 22, maxY: 32 });
     expect(rectsIntersect(rect, { minX: 21, minY: 31, maxX: 40, maxY: 40 })).toBe(true);
@@ -71,7 +71,7 @@ describe("bounds e pressão", () => {
 });
 
 describe("createId", () => {
-  it("gera UUID v4 mesmo sem crypto.randomUUID (contexto inseguro)", () => {
+  it("generates a v4 UUID even without crypto.randomUUID (insecure context)", () => {
     const original = globalThis.crypto.randomUUID;
     Object.defineProperty(globalThis.crypto, "randomUUID", { value: undefined, configurable: true });
     try {

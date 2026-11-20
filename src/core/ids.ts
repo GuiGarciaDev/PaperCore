@@ -4,11 +4,11 @@ interface CryptoLike {
 }
 
 /**
- * Gera um UUID v4.
+ * Generates a v4 UUID.
  *
- * `crypto.randomUUID` só existe em contexto seguro (HTTPS/localhost). Ao testar no tablet pela rede
- * local (`http://192.168.x.x`) ele é `undefined`, então caímos para `getRandomValues`, que existe em
- * qualquer contexto.
+ * `crypto.randomUUID` only exists in secure contexts (HTTPS/localhost). When testing on a tablet over
+ * the local network (`http://192.168.x.x`) it is `undefined`, so we fall back to `getRandomValues`,
+ * which exists in any context.
  */
 export function createId(): string {
   const cryptoApi = (globalThis as { crypto?: CryptoLike }).crypto;

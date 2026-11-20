@@ -1,7 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Testes de ponta a ponta no playground, com o Chrome instalado na máquina (sem baixar navegadores).
-// Cada teste roda num contexto novo: IndexedDB vazio.
+// End-to-end tests against the playground, using the locally installed Chrome (no browser download).
+// Every test runs in a fresh context: empty IndexedDB.
 export default defineConfig({
   testDir: "e2e",
   fullyParallel: true,

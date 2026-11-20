@@ -14,10 +14,10 @@ export type PaperCoreErrorCode =
   | "STORAGE_CORRUPTED"
   | "STORAGE_ERROR";
 
-/** Erro padronizado do PaperCore. Use `code` para tratar casos específicos. */
+/** Standard PaperCore error. Use `code` to handle specific cases. */
 export class PaperCoreError extends Error {
   readonly code: PaperCoreErrorCode;
-  /** Detalhes legíveis (por exemplo, a lista de problemas de validação). */
+  /** Human-readable details (for example, the list of validation problems). */
   readonly details: readonly string[];
 
   constructor(code: PaperCoreErrorCode, message: string, details: readonly string[] = []) {

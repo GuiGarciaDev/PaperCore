@@ -3,12 +3,12 @@ import type { PointerPolicy } from "./pointerPolicy.js";
 import type { Tool } from "./tools/types.js";
 
 export interface PinchUpdate {
-  /** Ponto médio anterior e atual, em pixels CSS do container. */
+  /** Previous and current midpoint, in the container's CSS pixels. */
   readonly fromX: number;
   readonly fromY: number;
   readonly toX: number;
   readonly toY: number;
-  /** Razão entre a distância atual e a anterior dos dedos. */
+  /** Ratio between the current and previous finger distance. */
   readonly ratio: number;
 }
 
@@ -17,13 +17,13 @@ export interface WheelUpdate {
   readonly y: number;
   readonly dx: number;
   readonly dy: number;
-  /** `true` com Ctrl/⌘ (ou pinça no trackpad, que o navegador reporta como Ctrl+roda). */
+  /** `true` with Ctrl/⌘ (or a trackpad pinch, which browsers report as Ctrl+wheel). */
   readonly zoom: boolean;
 }
 
 export interface PointerControllerHost {
   readonly policy: PointerPolicy;
-  /** Decide a ferramenta para este ponteiro (ou `null` para ignorá-lo). */
+  /** Picks the tool for this pointer (or `null` to ignore it). */
   resolveTool(kind: PointerKind, button: number): Tool | null;
   toLogical(sx: number, sy: number): { x: number; y: number };
   pinch(update: PinchUpdate): void;
@@ -46,12 +46,12 @@ interface Point {
 const LINE_HEIGHT_PX = 16;
 
 /**
- * Converte Pointer Events em gestos (ADR-0007):
- * - um único ponteiro desenha por vez;
- * - dois dedos fazem pinça (zoom + pan); um 2º dedo cancela o traço feito com o dedo;
- * - o dedo que sobra após a pinça é ignorado até ser levantado;
- * - enquanto a caneta escreve, toques (palma) são ignorados;
- * - `pointercancel` descarta; `lostpointercapture`/`blur` finalizam preservando a tinta.
+ * Turns Pointer Events into gestures:
+ * - only one pointer draws at a time;
+ * - two fingers pinch (zoom + pan); a 2nd finger cancels a finger stroke;
+ * - the finger left after a pinch is ignored until it is lifted;
+ * - while the pen writes, touches (palm) are ignored;
+ * - `pointercancel` discards; `lostpointercapture`/`blur` commit, keeping the ink.
  */
 export class PointerController {
   private active: ActivePointer | null = null;
@@ -79,14 +79,14 @@ export class PointerController {
     return this.active !== null || this.pinchState !== null;
   }
 
-  /** Descarta o gesto atual (por exemplo, ao entrar em modo somente leitura). */
+  /** Discards the current gesture (for example, when entering read-only mode). */
   cancelActive(): void {
     const active = this.active;
     this.active = null;
     if (active) this.safely(() => active.tool.cancel());
   }
 
-  /** Finaliza o gesto atual preservando o que foi desenhado. */
+  /** Ends the current gesture, keeping what was drawn. */
   endActive(): void {
     const active = this.active;
     this.active = null;
@@ -116,7 +116,7 @@ export class PointerController {
 
     if (kind === "touch") {
       this.touches.set(e.pointerId, this.screenPoint(e));
-      // Palma apoiada enquanto a caneta escreve: ignora.
+      // Palm resting while the pen writes: ignore it.
       if (this.active && this.active.kind !== "touch") {
         this.suppressed.add(e.pointerId);
         return;
@@ -129,7 +129,7 @@ export class PointerController {
     } else {
       if (this.active) return; // um ponteiro desenha por vez
       if (this.pinchState) {
-        // A caneta tem prioridade: encerra a pinça e ignora os dedos atuais.
+        // The pen wins: end the pinch and ignore the current fingers.
         this.pinchState = null;
         for (const id of this.touches.keys()) this.suppressed.add(id);
       }
@@ -141,7 +141,7 @@ export class PointerController {
     try {
       this.target.setPointerCapture(e.pointerId);
     } catch {
-      // Ponteiro já liberado pelo navegador: segue sem captura.
+      // Pointer already released by the browser: continue without capture.
     }
     this.active = { id: e.pointerId, kind, tool };
     const sample = this.sample(e);
@@ -173,7 +173,7 @@ export class PointerController {
     this.releaseTouch(e.pointerId);
   };
 
-  /** Captura perdida sem `pointerup` (por exemplo, um alert): finaliza preservando a tinta. */
+  /** Capture lost without `pointerup` (for example, an alert): commit, keeping the ink. */
   private readonly onLostCapture = (e: PointerEvent): void => {
     if (this.active?.id === e.pointerId) this.endActive();
   };
@@ -209,13 +209,13 @@ export class PointerController {
     this.suppressed.delete(pointerId);
     if (this.pinchState && this.touches.size < 2) {
       this.pinchState = null;
-      // O dedo que sobrou não deve começar a desenhar.
+      // The remaining finger must not start drawing.
       for (const id of this.touches.keys()) this.suppressed.add(id);
     }
   }
 
   private startPinch(): void {
-    if (this.active?.kind === "touch") this.cancelActive(); // 2º dedo cancela o traço do 1º
+    if (this.active?.kind === "touch") this.cancelActive(); // a 2nd finger cancels the 1st finger's stroke
     const [a, b] = this.pinchPoints();
     if (!a || !b) return;
     this.pinchState = { mid: midpoint(a, b), distance: Math.max(1, distance(a, b)) };

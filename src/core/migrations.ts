@@ -3,12 +3,12 @@ import { CURRENT_SCHEMA_VERSION } from "./types.js";
 
 export type RawDocument = Record<string, unknown>;
 
-/** Migração pura de uma versão `v` para `v + 1`. Não deve mutar a entrada. */
+/** Pure migration from version `v` to `v + 1`. Must not mutate its input. */
 export type Migration = (doc: RawDocument) => RawDocument;
 
 /**
- * Registro de migrações, indexado pela versão de ORIGEM.
- * Exemplo futuro: `1: (doc) => ({ ...doc, pages: doc.pages.map(addLayers) })` leva v1 → v2.
+ * Migration registry, indexed by the SOURCE version.
+ * Future example: `1: (doc) => ({ ...doc, pages: doc.pages.map(addLayers) })` takes v1 → v2.
  */
 export const MIGRATIONS: Readonly<Record<number, Migration>> = Object.freeze({});
 
@@ -18,25 +18,25 @@ export interface MigrateOptions {
 }
 
 /**
- * Leva um documento bruto (ainda não validado) até a versão alvo.
- * Versões mais novas que a suportada são rejeitadas, nunca aceitas silenciosamente.
+ * Brings a raw (not yet validated) document up to the target version.
+ * Versions newer than the supported one are rejected, never silently accepted.
  */
 export function migrateDocument(raw: unknown, options: MigrateOptions = {}): RawDocument {
   const migrations = options.migrations ?? MIGRATIONS;
   const target = options.targetVersion ?? CURRENT_SCHEMA_VERSION;
 
   if (typeof raw !== "object" || raw === null || Array.isArray(raw)) {
-    throw new PaperCoreError("INVALID_DOCUMENT", "O documento precisa ser um objeto.");
+    throw new PaperCoreError("INVALID_DOCUMENT", "The document must be an object.");
   }
   let doc = raw as RawDocument;
   const version = doc.schemaVersion;
   if (typeof version !== "number" || !Number.isInteger(version) || version < 1) {
-    throw new PaperCoreError("INVALID_DOCUMENT", "schemaVersion ausente ou inválido.");
+    throw new PaperCoreError("INVALID_DOCUMENT", "Missing or invalid schemaVersion.");
   }
   if (version > target) {
     throw new PaperCoreError(
       "UNSUPPORTED_VERSION",
-      `O documento usa o schema v${version}, mais novo que o suportado (v${target}). Atualize o PaperCore.`,
+      `The document uses schema v${version}, newer than the supported one (v${target}). Update PaperCore.`,
     );
   }
 
@@ -45,7 +45,7 @@ export function migrateDocument(raw: unknown, options: MigrateOptions = {}): Raw
     if (!migrate) {
       throw new PaperCoreError(
         "UNSUPPORTED_VERSION",
-        `Não há migração do schema v${current} para v${current + 1}.`,
+        `There is no migration from schema v${current} to v${current + 1}.`,
       );
     }
     doc = { ...migrate(doc), schemaVersion: current + 1 };

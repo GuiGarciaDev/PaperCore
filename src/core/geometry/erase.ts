@@ -4,8 +4,8 @@ import { computeStrokeBounds, type Rect } from "./bounds.js";
 import { MAX_PRESSURE_FACTOR, radiusAt } from "./pressure.js";
 
 /**
- * Passagem da borracha entre duas posições (uma "cápsula": segmento com raio).
- * Coordenadas e raio em unidades lógicas.
+ * Eraser pass between two positions (a "capsule": a segment with a radius).
+ * Coordinates and radius in logical units.
  */
 export interface EraserSweep {
   readonly x0: number;
@@ -16,13 +16,13 @@ export interface EraserSweep {
 }
 
 export interface EraseOptions {
-  /** Gera ids para os pedaços. */
+  /** Generates ids for the pieces. */
   readonly createId: () => string;
-  /** Pedaços nunca passam deste número de pontos (o validador rejeitaria). */
+  /** Pieces never exceed this number of points (the validator would reject them). */
   readonly maxPointsPerStroke: number;
 }
 
-/** Quadrado da distância do ponto (px, py) ao segmento (ax, ay)–(bx, by). */
+/** Squared distance from point (px, py) to segment (ax, ay)–(bx, by). */
 export function distanceToSegmentSq(
   px: number,
   py: number,
@@ -41,7 +41,7 @@ export function distanceToSegmentSq(
   return cx * cx + cy * cy;
 }
 
-/** Menor distância entre dois segmentos (0 se eles se cruzam). */
+/** Shortest distance between two segments (0 if they intersect). */
 function segmentDistance(
   ax: number,
   ay: number,
@@ -96,15 +96,15 @@ function overlaps(a: Rect, b: Rect): boolean {
 }
 
 /**
- * Apaga de um traço apenas a parte tocada pela borracha (ADR-0010).
+ * Erases from a stroke only the part touched by the eraser.
  *
- * - Devolve `null` se o traço não foi tocado (o chamador mantém o elemento original).
- * - Devolve os pedaços restantes (possivelmente nenhum) se foi tocado.
+ * - Returns `null` if the stroke was not touched (the caller keeps the original element).
+ * - Returns the remaining pieces (possibly none) if it was touched.
  *
- * A colisão considera o raio da borracha somado ao raio do traço em cada ponto. Segmentos
- * longos perto da borracha são subdivididos antes do teste, para que o corte não arranque
- * mais tinta do que a borracha tocou. Pedaços com menos de 2 pontos são descartados. As pontas
- * criadas pelo corte mantêm a pressão original (não são afinadas).
+ * The collision uses the eraser radius plus the stroke radius at each point. Long segments near
+ * the eraser are subdivided before the test, so the cut never removes more ink than the eraser
+ * touched. Pieces with fewer than 2 points are dropped. The ends created by the cut keep the
+ * original pressure (they are not tapered).
  */
 export function eraseFromStroke(
   stroke: StrokeElement,
@@ -121,7 +121,7 @@ export function eraseFromStroke(
   const maxReach = sweep.radius + (style.width / 2) * (hasPressure ? MAX_PRESSURE_FACTOR : 1);
   const step = Math.max(0.5, sweep.radius / 2);
 
-  // 1. Subdivide só os segmentos perto da borracha.
+  // 1. Subdivide only the segments near the eraser.
   const xs: number[] = [points[0]!];
   const ys: number[] = [points[1]!];
   const ps: number[] = [points[2]!];
@@ -149,7 +149,7 @@ export function eraseFromStroke(
     ps.push(bp);
   }
 
-  // 2. Marca os pontos tocados.
+  // 2. Mark the touched points.
   const erased: boolean[] = new Array<boolean>(xs.length);
   let any = false;
   for (let i = 0; i < xs.length; i++) {
@@ -160,13 +160,13 @@ export function eraseFromStroke(
   }
   if (!any) return null;
 
-  // 3. Sequências de pontos não tocados viram pedaços.
+  // 3. Runs of untouched points become pieces.
   const pieces: StrokeElement[] = [];
   let run: number[] = [];
   const flush = () => {
     if (run.length >= 2 * POINT_STRIDE) {
       for (let start = 0; start < run.length;) {
-        // Respeita o limite de pontos, repetindo o ponto de junção entre os pedaços.
+        // Respect the point limit, repeating the joining point between pieces.
         const end = Math.min(run.length, start + options.maxPointsPerStroke * POINT_STRIDE);
         const chunk = run.slice(start, end);
         if (chunk.length >= 2 * POINT_STRIDE) {

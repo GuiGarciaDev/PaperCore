@@ -9,8 +9,8 @@ interface StoredDocument {
 }
 
 /**
- * Adaptador em memória: para testes, demonstrações e SSR. Guarda cópias (structuredClone), como
- * um armazenamento real faria, para que mutações acidentais não vazem entre gravação e leitura.
+ * In-memory adapter: for tests, demos and SSR. It stores copies (structuredClone), like real
+ * storage would, so accidental mutations never leak between writing and reading.
  */
 export class MemoryStorageAdapter implements StorageAdapter {
   private readonly docs = new Map<string, StoredDocument>();
@@ -47,7 +47,7 @@ export class MemoryStorageAdapter implements StorageAdapter {
     return [...this.docs.keys()];
   }
 
-  /** Ids das páginas gravadas de um documento (útil em testes). */
+  /** Ids of a document's stored pages (useful in tests). */
   storedPageIds(documentId: string): string[] {
     return [...(this.docs.get(documentId)?.pages.keys() ?? [])];
   }

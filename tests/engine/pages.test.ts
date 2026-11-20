@@ -29,8 +29,8 @@ function withStroke(pageIndex = 0) {
   engine.loadDocument({ ...doc, pages });
 }
 
-describe("engine: páginas", () => {
-  it("addPage cria logo após a ativa, herda o fundo e a seleciona", () => {
+describe("engine: pages", () => {
+  it("addPage creates right after the active page, inherits the background and selects it", () => {
     engine.setPageBackground(createBackground("grid"));
     const second = engine.addPage();
     engine.setActivePage(ids()[0]!);
@@ -40,7 +40,7 @@ describe("engine: páginas", () => {
     expect(engine.getDocument().pages[1]!.background.type).toBe("grid");
   });
 
-  it("duplicatePage copia os traços com novos ids e seleciona a cópia", () => {
+  it("duplicatePage copies the strokes with new ids and selects the copy", () => {
     withStroke();
     const original = engine.getDocument().pages[0]!;
     const copyId = engine.duplicatePage();
@@ -51,7 +51,7 @@ describe("engine: páginas", () => {
     expect(copy.elements[0]!.id).not.toBe(original.elements[0]!.id);
   });
 
-  it("excluir a página ativa seleciona a seguinte (ou a anterior, se era a última)", () => {
+  it("deleting the active page selects the next one (or the previous one, if it was the last)", () => {
     const [a] = ids();
     const b = engine.addPage();
     const c = engine.addPage();
@@ -62,7 +62,7 @@ describe("engine: páginas", () => {
     expect(engine.getState().activePageId).toBe(a);
   });
 
-  it("o evento change da exclusão já sai com a página ativa correta (sem passar pela primeira)", () => {
+  it("the delete change event already carries the right active page (without passing through the first)", () => {
     const [a] = ids();
     const b = engine.addPage();
     const c = engine.addPage();
@@ -78,20 +78,20 @@ describe("engine: páginas", () => {
     expect(states.some((s) => s.activePageId === a)).toBe(false);
   });
 
-  it("excluir outra página mantém a ativa", () => {
+  it("deleting another page keeps the active one", () => {
     const b = engine.addPage();
     engine.deletePage(ids()[0]!);
     expect(engine.getState().activePageId).toBe(b);
     expect(engine.getState().activePageIndex).toBe(0);
   });
 
-  it("não exclui a última página nem páginas inexistentes", () => {
+  it("does not delete the last page or unknown pages", () => {
     expect(() => engine.deletePage()).toThrow(PaperCoreError);
     expect(() => engine.deletePage("nope")).toThrow(PaperCoreError);
     expect(engine.getState().pageCount).toBe(1);
   });
 
-  it("movePage reordena, mantém a página ativa e atualiza o índice", () => {
+  it("movePage reorders, keeps the active page and updates the index", () => {
     const [a] = ids();
     const b = engine.addPage();
     const c = engine.addPage();
@@ -100,13 +100,13 @@ describe("engine: páginas", () => {
     expect(ids()).toEqual([b, c, a]);
     expect(engine.getState().activePageId).toBe(a);
     expect(engine.getState().activePageIndex).toBe(2);
-    engine.movePage(a!, -5); // limitado ao intervalo
+    engine.movePage(a!, -5); // clamped to the range
     expect(ids()[0]).toBe(a);
     expect(() => engine.movePage(a!, 1.5)).toThrow(PaperCoreError);
   });
 
-  it("o histórico é por página: undo na página 2 não afeta a 1", () => {
-    engine.clearPage(); // sem traços: nada a desfazer, mas é uma operação válida
+  it("history is per page: undo on page 2 does not affect page 1", () => {
+    engine.clearPage(); // no strokes: nothing to undo, but it is a valid operation
     withStroke();
     engine.clearPage();
     expect(engine.getState().canUndo).toBe(true);
@@ -118,13 +118,13 @@ describe("engine: páginas", () => {
     expect(engine.getDocument().pages[0]!.elements).toHaveLength(1);
   });
 
-  it("setActivePage com id inexistente lança PAGE_NOT_FOUND", () => {
+  it("setActivePage with an unknown id throws PAGE_NOT_FOUND", () => {
     expect(() => engine.setActivePage("nope")).toThrow(expect.objectContaining({ code: "PAGE_NOT_FOUND" }));
   });
 });
 
-describe("engine: somente leitura", () => {
-  it("bloqueia mutações, mas navegação e zoom continuam", () => {
+describe("engine: read-only", () => {
+  it("blocks mutations, but navigation and zoom keep working", () => {
     const b = engine.addPage();
     engine.setReadOnly(true);
     expect(engine.getState().readOnly).toBe(true);
@@ -144,7 +144,7 @@ describe("engine: somente leitura", () => {
     expect(() => engine.clearPage()).not.toThrow();
   });
 
-  it("pode começar em somente leitura", () => {
+  it("can start in read-only mode", () => {
     engine.destroy();
     ({ engine } = mountEngine({ readOnly: true }));
     expect(engine.getState().readOnly).toBe(true);
@@ -152,8 +152,8 @@ describe("engine: somente leitura", () => {
   });
 });
 
-describe("engine: eventos change", () => {
-  it("informa o motivo e as páginas afetadas", () => {
+describe("engine: change events", () => {
+  it("reports the reason and the affected pages", () => {
     const changes: DocumentChange[] = [];
     engine.on("change", (c) => changes.push(c));
     const first = ids()[0]!;
@@ -169,14 +169,14 @@ describe("engine: eventos change", () => {
     expect(changes[2]!.changedPageIds).toEqual([first]);
   });
 
-  it("loadDocument volta para a primeira página", () => {
+  it("loadDocument goes back to the first page", () => {
     engine.addPage();
     expect(engine.getState().activePageIndex).toBe(1);
     engine.loadDocument(engine.getDocument());
     expect(engine.getState().activePageIndex).toBe(0);
   });
 
-  it("destroy é idempotente, remove o DOM e para de emitir", () => {
+  it("destroy is idempotent, removes the DOM and stops emitting", () => {
     const listener = vi.fn();
     engine.on("change", listener);
     engine.destroy();

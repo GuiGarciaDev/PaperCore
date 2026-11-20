@@ -14,25 +14,25 @@ function codeOf(fn: () => unknown): string | undefined {
   return undefined;
 }
 
-describe("serialização", () => {
-  it("faz round-trip exato", () => {
+describe("serialization", () => {
+  it("round-trips exactly", () => {
     const doc = docWithStrokes(3);
     expect(parseDocument(serializeDocument(doc))).toEqual(doc);
   });
 
-  it("rejeita JSON inválido", () => {
+  it("rejects invalid JSON", () => {
     expect(codeOf(() => parseDocument("{nope"))).toBe("INVALID_JSON");
   });
 
-  it("verifica o tamanho ANTES de fazer o parse", () => {
+  it("checks the size BEFORE parsing", () => {
     const limits = resolveLimits({ maxImportSize: 10 });
     expect(codeOf(() => parseDocument("x".repeat(11), limits))).toBe("IMPORT_TOO_LARGE");
   });
 
-  it("rejeita documento estruturalmente inválido com detalhes", () => {
+  it("rejects a structurally invalid document with details", () => {
     try {
       parseDocument(JSON.stringify({ ...docWithStrokes(0), pages: [] }));
-      expect.fail("deveria lançar");
+      expect.fail("should have thrown");
     } catch (error) {
       expect(error).toBeInstanceOf(PaperCoreError);
       expect((error as PaperCoreError).code).toBe("INVALID_DOCUMENT");
@@ -40,14 +40,14 @@ describe("serialização", () => {
     }
   });
 
-  it("rejeita versão mais nova que a suportada", () => {
+  it("rejects a version newer than the supported one", () => {
     const json = JSON.stringify({ ...docWithStrokes(0), schemaVersion: 99 });
     expect(codeOf(() => parseDocument(json))).toBe("UNSUPPORTED_VERSION");
   });
 });
 
-describe("migrações", () => {
-  it("aplica a cadeia v → v+1 até a versão alvo sem mutar a entrada", () => {
+describe("migrations", () => {
+  it("applies the v → v+1 chain up to the target version without mutating the input", () => {
     const toV2: Migration = (doc) => ({ ...doc, renamed: doc.legacy });
     const toV3: Migration = ({ legacy: _legacy, ...rest }) => rest;
     const input = { schemaVersion: 1, legacy: "x" };
@@ -56,13 +56,13 @@ describe("migrações", () => {
     expect(input).toEqual({ schemaVersion: 1, legacy: "x" });
   });
 
-  it("falha quando falta um passo da cadeia", () => {
+  it("fails when a step of the chain is missing", () => {
     expect(codeOf(() => migrateDocument({ schemaVersion: 1 }, { migrations: {}, targetVersion: 2 }))).toBe(
       "UNSUPPORTED_VERSION",
     );
   });
 
-  it("rejeita schemaVersion ausente", () => {
+  it("rejects a missing schemaVersion", () => {
     expect(codeOf(() => migrateDocument({}))).toBe("INVALID_DOCUMENT");
   });
 });

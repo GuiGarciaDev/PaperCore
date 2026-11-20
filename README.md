@@ -1,9 +1,18 @@
 # PaperCore
 
-**A vector drawing engine for digital notebooks on the web.** Handwriting with pressure-sensitive pens,
-multi-page documents with ruled or grid paper, an eraser that cuts strokes instead of deleting them,
-per-page undo/redo, pluggable persistence with autosave and a React binding, rendered with Canvas 2D
-and written in strict TypeScript with zero runtime dependencies.
+[![CI](https://github.com/GuiGarciaDev/PaperCore/actions/workflows/ci.yml/badge.svg)](https://github.com/GuiGarciaDev/PaperCore/actions/workflows/ci.yml)
+[![Live demo](https://img.shields.io/badge/demo-live-2563eb)](https://guigarciadev.github.io/PaperCore/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-16a34a)](LICENSE)
+
+**A small vector drawing engine for the web, built from scratch as a learning project.** Handwriting
+with pressure-sensitive pens, multi-page documents with ruled or grid paper, an eraser that cuts
+strokes instead of deleting them, per-page undo/redo, pluggable persistence with autosave and a React
+binding, rendered with Canvas 2D and written in strict TypeScript with zero runtime dependencies.
+
+**[▶ Try the live demo](https://guigarciadev.github.io/PaperCore/)** (works with a mouse, a finger or a stylus; the notebook is saved
+in your browser).
+
+![PaperCore playground: a notebook page with pressure-sensitive strokes](.github/media/screenshot-light.png)
 
 ```
 papercore           core engine (framework-agnostic, DOM only where it must be)
@@ -11,15 +20,22 @@ papercore/storage   storage adapters (IndexedDB, in-memory) and autosave
 papercore/react     <DrawingSurface>, useDrawingEngine, useEngineState
 ```
 
-> **Status:** MVP complete (all 7 planned stages). 155 unit tests and 6 end-to-end tests run in
-> real Chrome. Not yet published to npm: it is consumed locally by a study platform (exam questions
-> plus a digital notebook) that is being built on top of it.
+> **Built with AI, engineered with intent.** PaperCore was developed through an AI-assisted
+> engineering workflow: I defined the product, drove the architecture and every trade-off, and used
+> an AI coding agent (Claude Code) to implement, test and verify each step under strict quality
+> gates. See [How it was built with AI](#how-it-was-built-with-ai).
+>
+> 155 unit tests and 6 end-to-end tests in real Chrome · strict TypeScript · zero runtime
+> dependencies · every technical decision documented.
 
 ---
 
 ## Contents
 
-- [Why it exists](#why-it-exists)
+- [Demo](#demo)
+- [Why I built it](#why-i-built-it)
+- [Technical requirements](#technical-requirements)
+- [How it was built with AI](#how-it-was-built-with-ai)
 - [Quick start](#quick-start)
 - [Usage](#usage)
 - [Architecture](#architecture)
@@ -41,20 +57,178 @@ papercore/react     <DrawingSurface>, useDrawingEngine, useEngineState
 
 ---
 
-## Why it exists
+## Demo
 
-PaperCore is the drawing layer of a study platform where students solve exam questions by hand, the
-way they would on paper. That use case drives a few hard requirements:
+| Pressure-sensitive pen                                      | An eraser that cuts strokes, undone step by step             |
+| ----------------------------------------------------------- | ------------------------------------------------------------ |
+| ![Writing with pressure](.github/media/pen.gif)             | ![Cutting strokes with the eraser](.github/media/eraser.gif) |
+| **Pages, backgrounds, zoom and pan**                        | **Dark theme**                                               |
+| ![Pages, grid paper, zoom and pan](.github/media/pages.gif) | ![Dark theme](.github/media/screenshot-dark.png)             |
 
-- **Handwriting has to feel right** on an iPad with Apple Pencil, a Surface pen and a mouse, with
-  palm rejection, pressure and pinch zoom.
-- **Documents must stay vector.** Pages are data (strokes as points), never images, so they can be
-  stored per page, synced, migrated and later exported.
-- **No business rules inside the engine.** "Lock the notebook after the answer is submitted" belongs
-  to the app. The engine only offers the mechanism (`readOnly`).
+<p align="center">
+  <img src=".github/media/screenshot-mobile.png" alt="The playground on a phone" width="260" />
+</p>
 
-It lives in its own repository so it can evolve, be tested and be shown on its own
-([ADR-0001](docs/adr/0001-repositorio-separado.md)).
+## Why I built it
+
+Drawing apps feel simple from the outside, but a good one hides many interesting problems: pointer
+events and palm rejection, turning noisy pressure samples into a smooth outline, keeping a canvas
+sharp at any zoom without running out of memory, undo that does not copy the whole document, saving
+without losing ink when a tab dies. PaperCore is my attempt to understand those problems by building
+a small but complete engine from first principles, without a drawing library.
+
+I set myself a few requirements to keep it honest:
+
+- **Handwriting has to feel right** with a stylus (Apple Pencil, Surface pen), a finger and a mouse,
+  with palm rejection, pressure and pinch zoom.
+- **Documents stay vector.** Pages are data (strokes as points), never images, so they can be
+  stored per page, migrated and exported.
+- **The engine has no app logic.** Things like "lock the notebook when it is finished" belong to
+  whoever uses it. The engine only offers the mechanism (`readOnly`).
+- **Built like a real library**: strict types, a tested public API, documented decisions, and a
+  playground that exercises every feature.
+
+It is packaged as a standalone library, so it can evolve and be tested on its own.
+
+## Technical requirements
+
+A short summary of every requirement the engine was built against. The most important ones are
+explained in depth under [Technical decisions](#technical-decisions).
+
+**Scope and principles**
+
+- A standalone package with a small public API. It knows nothing about users, backends or business
+  rules.
+- The document is structured vector data; the canvas is only a view, never the source of truth.
+- Coordinates are always in logical page units, never physical pixels.
+- Handwriting quality comes first. Nothing is implemented "just in case".
+
+**Architecture**
+
+- Layers: `core` → `rendering` → `interaction` → `engine`. `storage` depends only on `core`, and
+  `react` only on the public API.
+- The core has no DOM (checked by a dedicated tsconfig) and layer boundaries are enforced by ESLint.
+- Three entry points: `papercore`, `papercore/storage` and `papercore/react`. React is an optional
+  peer dependency.
+- Safe to import during SSR: no module touches `window` or `document` when it loads.
+
+**Document model**
+
+- Multi-page documents. Each page has its own size and a background (blank, ruled or grid).
+- Strokes are flat `[x, y, pressure]` arrays, quantized to 2 decimals when committed.
+- Colors are `#rrggbb` only. IDs match `[A-Za-z0-9_-]{1,64}` and are unique per document, generated
+  with `crypto.randomUUID` and a `crypto.getRandomValues` fallback for insecure contexts.
+- Strict validation that returns a normalized copy, a versioned schema with pure `v → v+1`
+  migrations, and documents from a newer version are rejected.
+- Imports check the size before parsing. Errors are `PaperCoreError` instances with stable codes.
+
+**History and events**
+
+- Undo/redo stores operations (add, remove, replace) with their indices, not snapshots. One stack per
+  page, with a configurable limit.
+- A whole stroke is one operation, and so is a whole eraser gesture.
+- Structural page actions (add, delete, duplicate, move, background) are not in history; clearing a
+  page is.
+- Immutable per-page updates and a `change` event with the reason and the affected pages. History is
+  recorded before the event fires.
+- Read-only mode is enforced by the store and can be toggled at runtime; navigation and zoom keep
+  working.
+
+**Rendering**
+
+- Canvas 2D with three layers (background, strokes, live stroke), redrawn at most once per frame.
+- The canvas is always viewport-sized, with the pixel ratio capped below the iOS Safari canvas limit.
+- The viewport is `{ zoom, center }` in logical units: zoom 1 fits the page to the width, the page
+  never leaves the screen and resizing keeps the same point centered.
+- Cached `Path2D` per stroke, off-screen culling, and backgrounds drawn only where visible.
+
+**Stroke**
+
+- Raw points are stored and smoothed at render time, so the algorithm can improve without migrating
+  documents.
+- An in-house outline algorithm: pressure-driven radius, round caps and reinforced joints on tight
+  curves.
+- A stroke that reaches the point limit continues as a new stroke instead of dropping points.
+
+**Input**
+
+- Pointer Events with pointer capture, coalesced events and `touch-action: none`.
+- Only one pointer draws at a time. Palm rejection is on by default, and which pointer kinds may
+  draw is configurable.
+- Two-finger pinch zooms and pans; a second finger cancels a finger stroke.
+- A cancelled pointer discards the stroke; losing capture or window focus commits it, so ink is never
+  lost.
+- Wheel pans, `Ctrl`/`⌘` + wheel zooms at the cursor, the middle button pans. Keyboard shortcuts are
+  opt-in and only work while the surface has focus.
+
+**Tools**
+
+- Pen with color and width in logical units, so ink scales with zoom like paper.
+- An eraser that cuts strokes, sized in screen pixels, with a live preview and one undo step per
+  gesture. The back end of a digital pen erases with any tool.
+- Pan tool, which is also what editing tools become in read-only mode.
+
+**Persistence**
+
+- Optional and outside the core, behind a pluggable adapter interface. IndexedDB and in-memory
+  adapters are included.
+- Autosave writes only dirty pages, debounced with a maximum wait, and never reports `saved` while
+  changes are pending.
+- Flushes when the tab is hidden or closed, retries failures with backoff, and validates stored data
+  like any import.
+
+**React**
+
+- `<DrawingSurface>`, `useDrawingEngine` and `useEngineState`, safe under `StrictMode`.
+- The toolbar is not part of the library; the playground is the reference implementation.
+
+**Quality**
+
+- Every limit is configurable (see [Limits](#limits)).
+- Every stage had to pass both typechecks, lint, unit tests, the build and the end-to-end tests.
+
+## How it was built with AI
+
+This project is a deliberate exercise in **AI-assisted software engineering**: using an AI coding
+agent as a force multiplier while keeping engineering judgment, architecture and quality firmly in
+human hands. The AI wrote most of the code; the decisions about _what_ to build, _how_ it should be
+structured and _whether it was good enough_ were mine.
+
+**Division of work**
+
+| I owned                                                                                | The AI agent (Claude Code) handled                       |
+| -------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| Learning goals, requirements and scope                                                 | Implementation of each stage from the agreed spec        |
+| Architecture direction (separate repo, layering, pluggable storage, React as optional) | Writing the documentation and keeping it in sync         |
+| Reviewing and approving every spec change and trade-off                                | Writing unit, integration and end-to-end tests           |
+| Hands-on testing on real devices and reporting defects                                 | Root-cause analysis and fixes, with regression tests     |
+| UI direction for the playground                                                        | Turning that direction into design tokens and components |
+
+**The workflow**
+
+1. **Spec first, then a critical review.** I wrote the functional and non-functional requirements and
+   asked the AI to _find the flaws_ before writing any code. The review surfaced problems that would
+   have been expensive later: no per-page history, colors open to injection in a future SVG export,
+   iOS canvas memory limits, autosave race conditions, a duplicated React instance with local
+   linking. Each fix became a documented decision.
+2. **Small, verifiable stages.** The work was split into 7 stages (foundation → rendering → pen →
+   eraser → pages → storage → React and distribution). Each stage had to pass the same gate before
+   moving on: both typechecks (including a DOM-free core), lint with layer rules, all tests, the
+   build and a manual check in the playground.
+3. **Guardrails the AI cannot ignore.** Architectural rules are enforced by tooling (a DOM-free
+   tsconfig for the core, ESLint import boundaries), so generated code that crosses a layer fails the
+   build instead of slipping into review.
+4. **Human testing on real hardware, AI-assisted debugging.** Defects such as the holes in thick
+   curved strokes were found by using the notebook, then reproduced, measured (pixel sampling before
+   and after) and locked down with regression tests. See [Bugs worth telling](#bugs-worth-telling).
+5. **Decisions stay documented.** Every non-obvious choice is written down with its reasoning (see
+   [Technical decisions](#technical-decisions)), so it survives beyond the conversation that produced
+   it.
+
+The takeaway: AI made it possible to deliver an engine of this scope (custom stroke geometry, a
+cutting eraser, crash-consistent persistence, a StrictMode-safe React binding, 160+ tests) quickly
+and alone, **without trading away rigor**. The rigor came from the process: clear specs, small
+stages, automated gates and human review.
 
 ## Quick start
 
@@ -96,7 +270,7 @@ engine.on("change", (change) => {
 engine.setPenStyle({ color: "#2563eb", width: 4 });
 engine.setTool("eraser");
 engine.addPage();
-engine.setReadOnly(true); // e.g. after the answer was submitted
+engine.setReadOnly(true); // e.g. lock a finished notebook
 const json = engine.exportJSON();
 engine.destroy(); // idempotent; removes listeners, observers, frames and DOM
 ```
@@ -115,7 +289,7 @@ const autosave = createAutosave(engine, storage); // debounced, dirty pages only
 if (!saved) await autosave.saveAll(); // first save
 
 autosave.on("state", ({ status }) => showIndicator(status)); // idle | dirty | saving | saved | error
-await autosave.flush(); // before submitting an answer, for example
+await autosave.flush(); // e.g. before navigating away
 ```
 
 ### React
@@ -173,8 +347,7 @@ flowchart LR
   react --> engine
 ```
 
-Layer boundaries are **enforced by tooling, not by discipline**
-([ADR-0002](docs/adr/0002-camadas-e-fronteiras.md)):
+Layer boundaries are **enforced by tooling, not by discipline**:
 
 - `core` is compiled by a second tsconfig (`tsconfig.core.json`) **without the DOM lib**. Any
   `window`, `document` or `Path2D` in the core breaks `npm run typecheck`. As a result, the core
@@ -195,18 +368,14 @@ src/engine.ts      wires everything into createPaperCore()
 playground/        demo app (not published)
 tests/             Vitest unit tests (engine and React in happy-dom)
 e2e/               Playwright tests against the playground
-docs/              revised spec and ADRs (in Portuguese)
 ```
 
 ## Technical decisions
 
-Every non-obvious decision is recorded as an ADR in [`docs/adr`](docs/adr), and the full revised
-spec is in [`docs/SPEC.md`](docs/SPEC.md). Both are written in Portuguese; the summaries below
-cover the reasoning.
+The choices below are the ones where the obvious approach was not good enough. Each one explains
+what was decided and why.
 
 ### 1. Document model
-
-([ADR-0003](docs/adr/0003-modelo-do-documento.md))
 
 ```ts
 interface PaperDocument {
@@ -248,8 +417,6 @@ type PaperElement = StrokeElement; // discriminated union: text, shapes and imag
 
 ### 2. History as operations, one stack per page
 
-([ADR-0004](docs/adr/0004-historico-por-operacoes.md))
-
 ```ts
 type ElementOperation =
   | { type: "ADD_ELEMENTS"; pageId; added: { index; element }[] }
@@ -265,14 +432,12 @@ type ElementOperation =
 - **One undo stack per page.** Undo only affects the page you are looking at, as in a real notebook.
   A global stack would make undo jump between pages.
 - Structural page operations (add, delete, duplicate, move, change background) are not in history
-  for the MVP. "Clear page" is (it is a `REMOVE_ELEMENTS`).
+  for now. "Clear page" is (it is a `REMOVE_ELEMENTS`).
 - The `PaperStore` uses **immutable per-page updates**: each change creates a new page object and a
   new document object while sharing untouched pages. Snapshots are cheap and safe to hand to
   `useSyncExternalStore`.
 
 ### 3. Stroke geometry
-
-([ADR-0005](docs/adr/0005-geometria-do-traco.md))
 
 The stroke outline is an in-house pure function (`core/geometry/strokeOutline.ts`) instead of a
 library such as `perfect-freehand`. It sits behind one signature, so it can be swapped without
@@ -293,8 +458,6 @@ During capture, points closer than ~0.75 screen px to the previous one are dropp
 
 ### 4. Rendering and viewport
 
-([ADR-0006](docs/adr/0006-viewport-e-canvas.md))
-
 - **Three canvas layers**: background, committed strokes and live stroke. While writing, only the
   live layer is redrawn. Redraws are batched with `requestAnimationFrame`, at most one per frame.
 - **The canvas is always viewport-sized** (container × DPR), never page × zoom, so zooming in does
@@ -309,8 +472,6 @@ During capture, points closer than ~0.75 screen px to the previous one are dropp
   for the visible area, never thinner than one physical pixel.
 
 ### 5. Input, palm rejection and gestures
-
-([ADR-0007](docs/adr/0007-entrada-e-gestos.md))
 
 - DOM pointer events are normalized into a pure `InputSample { x, y, pressure, hasPressure, kind,
 time }`. Tools only consume samples, so they are unit-tested without a browser, including
@@ -327,8 +488,6 @@ time }`. Tools only consume samples, so they are unit-tested without a browser, 
   `window`, so it cannot fight the host app's inputs.
 
 ### 6. An eraser that cuts strokes
-
-([ADR-0010](docs/adr/0010-borracha-que-corta.md))
 
 Most simple drawing apps delete the whole stroke on contact. PaperCore removes **only the part that
 was touched** and keeps the document vector.
@@ -353,8 +512,6 @@ was touched** and keeps the document vector.
 
 ### 7. Persistence and autosave
 
-([ADR-0008](docs/adr/0008-persistencia-plugavel.md))
-
 ```ts
 interface StorageAdapter {
   load(documentId: string): Promise<PaperDocument | null>;
@@ -366,7 +523,7 @@ interface StorageAdapter {
 ```
 
 - Persistence lives in its own subpath and depends only on the core. It saves **dirty pages, not the
-  whole document**, which matches the study platform's per-page sync. The app can plug in its own
+  whole document**, which keeps writes small and maps naturally onto per-page sync. The app can plug in its own
   adapter, for example one that writes locally and queues for the server.
 - **Crash consistency.** `meta.pageIds` is the source of truth for which pages exist and in what
   order. The IndexedDB adapter writes pages **and** meta in a single transaction. Deletions happen
@@ -393,7 +550,7 @@ stateDiagram-v2
   finishes, if the generation moved on while it was writing, the state goes back to `dirty` and
   another save is scheduled. The UI **never shows `saved` while changes are pending**.
 - Debounce (800 ms) with `maxWait` (5 s), so continuous writing still gets saved.
-- `flush()` is public (the app flushes before submitting an answer) and also runs on
+- `flush()` is public (for example, the app flushes before navigating away) and also runs on
   `visibilitychange → hidden` and `pagehide`, the last reliable moments on mobile.
 - `reason: "load"` does not mark the document dirty. If a load replaces a document that still has
   pending changes, the pending batch is saved first, using the old document's immutable snapshot.
@@ -418,8 +575,6 @@ stateDiagram-v2
   the reference implementation.
 
 ### 9. Build and packaging
-
-([ADR-0009](docs/adr/0009-build-com-tsc.md))
 
 - Built with plain **`tsc`**: ESM, one file per module, `.d.ts`, declaration maps and source maps. No
   bundling, because consumers already have a bundler and separate modules tree-shake better. Vite is
@@ -492,7 +647,7 @@ All limits live in `core/config.ts` and can be overridden through `options.limit
 
 ## Roadmap
 
-Out of scope for the MVP, but the model already leaves room for them (discriminated element union,
+The model already leaves room for these next steps (discriminated element union,
 indexed operations, schema migrations):
 
 - Page thumbnails and page reordering UI
@@ -500,7 +655,7 @@ indexed operations, schema migrations):
 - Selection, lasso, text, shapes and images
 - Highlighter (translucent ink needs a different fill strategy than opaque strokes)
 - Spatial index for very dense pages; tiled or bitmap-cached rendering if profiling asks for it
-- Publishing to npm once the API has been stable for a few weeks
+- Publishing to npm
 
 ## License
 

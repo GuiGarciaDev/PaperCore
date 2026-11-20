@@ -1,16 +1,16 @@
 import type { PointerKind } from "./input.js";
 
 export interface InputPolicyOptions {
-  /** Tipos de ponteiro que podem desenhar. Padrão: todos. */
+  /** Pointer kinds allowed to draw. Default: all. */
   readonly drawWith?: readonly PointerKind[];
   /**
-   * Rejeição de palma: depois que uma caneta é detectada, o toque deixa de desenhar e passa a fazer
-   * pan/pinça. Padrão: `true`.
+   * Palm rejection: once a pen is detected, touch stops drawing and pans/pinches
+   * instead. Default: `true`.
    */
   readonly palmRejection?: boolean;
 }
 
-/** Decide quem pode desenhar. Puro e testável. */
+/** Decides who may draw. Pure and testable. */
 export class PointerPolicy {
   private readonly drawWith: ReadonlySet<PointerKind>;
   private readonly palmRejection: boolean;
@@ -21,7 +21,7 @@ export class PointerPolicy {
     this.palmRejection = options.palmRejection ?? true;
   }
 
-  /** Registra o tipo de um ponteiro que tocou a superfície. */
+  /** Records the kind of a pointer that touched the surface. */
   observe(kind: PointerKind): void {
     if (kind === "pen") this.penDetected = true;
   }

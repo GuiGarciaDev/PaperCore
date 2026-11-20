@@ -18,8 +18,8 @@ export interface BackgroundOverrides {
 }
 
 /**
- * Cria um fundo com os valores padrão do tipo, aplicando sobrescritas opcionais.
- * Só copia os campos que o tipo possui (um fundo "blank" nunca recebe `lineColor`).
+ * Creates a background with the type's default values, applying optional overrides.
+ * Only copies the fields the type has (a "blank" background never gets `lineColor`).
  */
 export function createBackground(type: BackgroundType, overrides: BackgroundOverrides = {}): PageBackground {
   const base = DEFAULT_BACKGROUNDS[type];
@@ -55,7 +55,7 @@ export interface CreateDocumentOptions {
   background?: PageBackground;
 }
 
-/** Cria um documento válido com uma página. */
+/** Creates a valid document with one page. */
 export function createDocument(options: CreateDocumentOptions = {}): PaperDocument {
   const pageSize = { ...(options.pageSize ?? DEFAULT_PAGE_SIZE) };
   return {
@@ -66,7 +66,7 @@ export function createDocument(options: CreateDocumentOptions = {}): PaperDocume
   };
 }
 
-/** Copia um elemento com um novo id (usado ao duplicar páginas). */
+/** Copies an element with a new id (used when duplicating pages). */
 export function cloneElementWithNewId(element: PaperElement): PaperElement {
   return { ...element, id: createId(), style: { ...element.style }, points: element.points.slice() };
 }

@@ -3,24 +3,24 @@ import type { Rect } from "../core/geometry/bounds.js";
 import type { Size } from "../core/types.js";
 
 /**
- * Estado do viewport (ADR-0006). O centro está em COORDENADAS LÓGICAS da página:
- * redimensionar o container mantém o mesmo ponto no centro sem cálculo extra.
+ * Viewport state. The center is in the page's LOGICAL COORDINATES:
+ * resizing the container keeps the same point centered with no extra math.
  */
 export interface ViewportState {
-  /** 1 = página encaixada na largura do container. */
+  /** 1 = page fitted to the container width. */
   readonly zoom: number;
   readonly centerX: number;
   readonly centerY: number;
 }
 
 export interface ViewportMetrics {
-  /** Tamanho do container em pixels CSS. */
+  /** Container size in CSS pixels. */
   readonly containerWidth: number;
   readonly containerHeight: number;
   readonly page: Size;
 }
 
-/** Transformação lógica → tela (pixels CSS): `screen = logical × scale + offset`. */
+/** Logical → screen (CSS pixels) transform: `screen = logical × scale + offset`. */
 export interface ViewTransform {
   readonly scale: number;
   readonly offsetX: number;
@@ -28,9 +28,9 @@ export interface ViewTransform {
 }
 
 export interface ViewportConfig {
-  /** Margem ao redor da página, em pixels CSS. */
+  /** Margin around the page, in CSS pixels. */
   readonly padding: number;
-  /** Largura máxima da página no zoom 1, em pixels CSS (evita página gigante em monitores largos). */
+  /** Maximum page width at zoom 1, in CSS pixels (avoids a giant page on wide monitors). */
   readonly maxFitWidth: number;
 }
 
@@ -62,7 +62,7 @@ export function logicalToScreen(t: ViewTransform, x: number, y: number): { x: nu
   return { x: x * t.scale + t.offsetX, y: y * t.scale + t.offsetY };
 }
 
-/** Retângulo lógico visível no container (para descartar o que está fora da tela). */
+/** Logical rect visible in the container (to cull what is off-screen). */
 export function visibleRect(t: ViewTransform, containerWidth: number, containerHeight: number): Rect {
   const a = screenToLogical(t, 0, 0);
   const b = screenToLogical(t, containerWidth, containerHeight);
@@ -72,12 +72,12 @@ export function visibleRect(t: ViewTransform, containerWidth: number, containerH
 function clampAxis(center: number, pageLength: number, halfVisible: number, margin: number): number {
   const min = halfVisible - margin;
   const max = pageLength - halfVisible + margin;
-  // Se a página inteira cabe nesse eixo, ela fica centralizada.
+  // If the whole page fits on this axis, it stays centered.
   if (min > max) return pageLength / 2;
   return Math.min(max, Math.max(min, center));
 }
 
-/** Limita zoom e centro: a página nunca "foge" da tela além da margem. */
+/** Clamps zoom and center: the page never "escapes" the screen beyond the margin. */
 export function clampState(
   state: ViewportState,
   m: ViewportMetrics,
@@ -94,7 +94,7 @@ export function clampState(
   };
 }
 
-/** Estado inicial: zoom 1, mostrando o topo da página. */
+/** Initial state: zoom 1, showing the top of the page. */
 export function initialState(
   m: ViewportMetrics,
   zoomRange: Range,
@@ -103,7 +103,7 @@ export function initialState(
   return clampState({ zoom: 1, centerX: m.page.width / 2, centerY: 0 }, m, zoomRange, config);
 }
 
-/** Move o viewport por um deslocamento em pixels de tela (arrastar para a direita mostra o que está à esquerda). */
+/** Moves the viewport by a screen-pixel delta (dragging right reveals what is on the left). */
 export function panBy(
   state: ViewportState,
   dx: number,
@@ -121,7 +121,7 @@ export function panBy(
   );
 }
 
-/** Aplica um zoom mantendo fixo o ponto lógico que está sob (sx, sy). */
+/** Applies a zoom keeping the logical point under (sx, sy) fixed. */
 export function zoomAt(
   state: ViewportState,
   nextZoom: number,

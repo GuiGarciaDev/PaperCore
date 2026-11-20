@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <!-- Ícones (SVG inline, sem dependências). -->
+    <!-- Icons (inline SVG, no dependencies). -->
     <svg width="0" height="0" style="position: absolute" aria-hidden="true">
       <defs>
         <symbol id="i-pen" viewBox="0 0 24 24">
@@ -80,154 +80,142 @@
         <span class="eyebrow">Playground</span>
       </div>
 
-      <nav class="pages" role="group" aria-label="Páginas">
-        <button type="button" class="icon-btn" id="prev" aria-label="Página anterior" title="Página anterior">
+      <nav class="pages" role="group" aria-label="Pages">
+        <button type="button" class="icon-btn" id="prev" aria-label="Previous page" title="Previous page">
           <svg><use href="#i-left" /></svg>
         </button>
         <span id="page-label" class="page-label" aria-live="polite">1 / 1</span>
-        <button type="button" class="icon-btn" id="next" aria-label="Próxima página" title="Próxima página">
+        <button type="button" class="icon-btn" id="next" aria-label="Next page" title="Next page">
           <svg><use href="#i-right" /></svg>
         </button>
         <span class="divider" aria-hidden="true"></span>
-        <button type="button" class="btn ghost" id="add-page" title="Nova página">
-          <svg><use href="#i-plus" /></svg><span>Página</span>
+        <button type="button" class="btn ghost" id="add-page" title="New page">
+          <svg><use href="#i-plus" /></svg><span>Page</span>
         </button>
         <button
           type="button"
           class="icon-btn"
           id="duplicate-page"
-          aria-label="Duplicar página"
-          title="Duplicar página"
+          aria-label="Duplicate page"
+          title="Duplicate page"
         >
           <svg><use href="#i-copy" /></svg>
         </button>
-        <button
-          type="button"
-          class="icon-btn"
-          id="delete-page"
-          aria-label="Excluir página"
-          title="Excluir página"
-        >
+        <button type="button" class="icon-btn" id="delete-page" aria-label="Delete page" title="Delete page">
           <svg><use href="#i-trash" /></svg>
         </button>
-        <select id="background" class="select" aria-label="Fundo da página">
-          <option value="ruled">Pautado</option>
-          <option value="grid">Quadriculado</option>
-          <option value="blank">Branco</option>
+        <select id="background" class="select" aria-label="Page background">
+          <option value="ruled">Ruled</option>
+          <option value="grid">Grid</option>
+          <option value="blank">Blank</option>
         </select>
       </nav>
 
-      <div class="file" role="group" aria-label="Arquivo">
-        <label class="toggle" title="Somente leitura">
+      <div class="file" role="group" aria-label="File">
+        <label class="toggle" title="Read-only">
           <input type="checkbox" id="readonly" />
           <span class="toggle-track" aria-hidden="true"></span>
           <svg><use href="#i-lock" /></svg>
-          <span class="toggle-label">Leitura</span>
+          <span class="toggle-label">Read-only</span>
         </label>
-        <button type="button" class="btn outline" id="import" title="Importar JSON">
-          <svg><use href="#i-upload" /></svg><span>Importar</span>
+        <button type="button" class="btn outline" id="import" title="Import JSON">
+          <svg><use href="#i-upload" /></svg><span>Import</span>
         </button>
-        <button type="button" class="btn solid" id="export" title="Exportar JSON">
-          <svg><use href="#i-download" /></svg><span>Exportar</span>
+        <button type="button" class="btn solid" id="export" title="Export JSON">
+          <svg><use href="#i-download" /></svg><span>Export</span>
         </button>
         <input type="file" id="import-file" accept="application/json,.json" hidden />
       </div>
     </header>
 
     <div class="stage">
-      <main id="surface" aria-label="Caderno"></main>
+      <main id="surface" aria-label="Notebook"></main>
 
-      <!-- Doca flutuante de ferramentas. -->
-      <div class="dock" role="toolbar" aria-label="Ferramentas">
-        <div class="segmented" role="group" aria-label="Ferramenta">
-          <button type="button" data-tool="pen" aria-pressed="true" title="Caneta (P)" aria-label="Caneta">
+      <!-- Floating tool dock. -->
+      <div class="dock" role="toolbar" aria-label="Tools">
+        <div class="segmented" role="group" aria-label="Tool">
+          <button type="button" data-tool="pen" aria-pressed="true" title="Pen" aria-label="Pen">
             <svg><use href="#i-pen" /></svg>
           </button>
           <button
             type="button"
             data-tool="eraser"
             aria-pressed="false"
-            title="Borracha (E) — ou a ponta traseira da caneta"
-            aria-label="Borracha"
+            title="Eraser — or the back end of the pen"
+            aria-label="Eraser"
           >
             <svg><use href="#i-eraser" /></svg>
           </button>
-          <button type="button" data-tool="pan" aria-pressed="false" title="Mover (H)" aria-label="Mover">
+          <button type="button" data-tool="pan" aria-pressed="false" title="Pan" aria-label="Pan">
             <svg><use href="#i-hand" /></svg>
           </button>
         </div>
 
         <span class="divider" aria-hidden="true"></span>
 
-        <div class="swatches" role="group" aria-label="Cor">
+        <div class="swatches" role="group" aria-label="Color">
           <button
             type="button"
             class="swatch"
             data-color="#1f2937"
-            aria-label="Preto"
+            aria-label="Black"
             style="--c: #1f2937"
           ></button>
           <button
             type="button"
             class="swatch"
             data-color="#2563eb"
-            aria-label="Azul"
+            aria-label="Blue"
             style="--c: #2563eb"
           ></button>
           <button
             type="button"
             class="swatch"
             data-color="#dc2626"
-            aria-label="Vermelho"
+            aria-label="Red"
             style="--c: #dc2626"
           ></button>
           <button
             type="button"
             class="swatch"
             data-color="#16a34a"
-            aria-label="Verde"
+            aria-label="Green"
             style="--c: #16a34a"
           ></button>
         </div>
 
         <span class="divider" aria-hidden="true"></span>
 
-        <label class="range" title="Espessura da caneta">
-          <span class="eyebrow">Traço</span>
+        <label class="range" title="Pen width">
+          <span class="eyebrow">Stroke</span>
           <input id="width" type="range" min="0.5" max="12" step="0.5" value="3" />
           <output id="width-value">3</output>
         </label>
-        <label class="range" title="Tamanho da borracha (px de tela)">
-          <span class="eyebrow">Borracha</span>
+        <label class="range" title="Eraser size (screen px)">
+          <span class="eyebrow">Eraser</span>
           <input id="eraser-size" type="range" min="4" max="120" step="2" value="20" />
           <output id="eraser-size-value">20</output>
         </label>
 
         <span class="divider" aria-hidden="true"></span>
 
-        <div class="cluster" role="group" aria-label="Histórico">
-          <button type="button" class="icon-btn" id="undo" aria-label="Desfazer" title="Desfazer (Ctrl+Z)">
+        <div class="cluster" role="group" aria-label="History">
+          <button type="button" class="icon-btn" id="undo" aria-label="Undo" title="Undo (Ctrl+Z)">
             <svg><use href="#i-undo" /></svg>
           </button>
-          <button
-            type="button"
-            class="icon-btn"
-            id="redo"
-            aria-label="Refazer"
-            title="Refazer (Ctrl+Shift+Z)"
-          >
+          <button type="button" class="icon-btn" id="redo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)">
             <svg><use href="#i-redo" /></svg>
           </button>
-          <button type="button" class="btn ghost danger-text" id="clear" title="Limpar página">Limpar</button>
+          <button type="button" class="btn ghost danger-text" id="clear" title="Clear page">Clear</button>
         </div>
       </div>
 
       <div class="zoom" role="group" aria-label="Zoom">
-        <button type="button" class="icon-btn" id="zoom-out" aria-label="Diminuir zoom" title="Diminuir zoom">
+        <button type="button" class="icon-btn" id="zoom-out" aria-label="Zoom out" title="Zoom out">
           <svg><use href="#i-minus" /></svg>
         </button>
-        <button type="button" class="zoom-value" id="zoom-reset" title="Voltar ao início">100%</button>
-        <button type="button" class="icon-btn" id="zoom-in" aria-label="Aumentar zoom" title="Aumentar zoom">
+        <button type="button" class="zoom-value" id="zoom-reset" title="Reset view">100%</button>
+        <button type="button" class="icon-btn" id="zoom-in" aria-label="Zoom in" title="Zoom in">
           <svg><use href="#i-plus" /></svg>
         </button>
       </div>
@@ -235,22 +223,22 @@
 
     <footer class="status" aria-live="polite">
       <span id="stats">—</span>
-      <span id="input-info">Ponteiro: —</span>
-      <span id="change-info">Última alteração: —</span>
+      <span id="input-info">Pointer: —</span>
+      <span id="change-info">Last change: —</span>
       <span id="save-info" class="save-info"></span>
-      <span class="hint">Roda: rolar · Ctrl+roda/pinça: zoom · botão do meio: mover</span>
+      <span class="hint">Wheel: scroll · Ctrl+wheel/pinch: zoom · middle button: pan</span>
     </footer>
 
     <div id="toast" role="alert" hidden></div>
 
-    <!-- Confirmação dentro da página: alguns navegadores (e webviews) bloqueiam o confirm() nativo. -->
+    <!-- In-page confirmation: some browsers (and webviews) block the native confirm(). -->
     <dialog id="confirm-dialog" aria-labelledby="confirm-message">
       <form method="dialog">
-        <span class="eyebrow">Confirmar</span>
+        <span class="eyebrow">Confirm</span>
         <p id="confirm-message"></p>
         <div class="dialog-actions">
-          <button type="submit" value="cancel" class="btn outline" autofocus>Cancelar</button>
-          <button type="submit" value="ok" id="confirm-ok" class="btn danger">Confirmar</button>
+          <button type="submit" value="cancel" class="btn outline" autofocus>Cancel</button>
+          <button type="submit" value="ok" id="confirm-ok" class="btn danger">Confirm</button>
         </div>
       </form>
     </dialog>

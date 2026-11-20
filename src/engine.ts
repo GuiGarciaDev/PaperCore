@@ -35,21 +35,21 @@ import {
 } from "./rendering/viewport.js";
 
 export interface PaperCoreOptions {
-  /** Documento inicial. Sem ele, um documento novo com uma página pautada é criado. */
+  /** Initial document. Without it, a new document with one ruled page is created. */
   document?: PaperDocument;
   readOnly?: boolean;
   limits?: PartialLimits;
   input?: InputPolicyOptions;
-  /** Atalhos (Ctrl/⌘+Z, Ctrl/⌘+Shift+Z, Ctrl+Y) só com a superfície em foco. Padrão: `false`. */
+  /** Shortcuts (Ctrl/⌘+Z, Ctrl/⌘+Shift+Z, Ctrl+Y) only while the surface has focus. Default: `false`. */
   keyboardShortcuts?: boolean;
   tool?: ToolName;
   pen?: Partial<StrokeStyle>;
-  /** Diâmetro da borracha em pixels de tela. */
+  /** Eraser diameter in screen pixels. */
   eraserSize?: number;
   viewport?: Partial<ViewportConfig>;
 }
 
-/** Estado de interface, imutável e estável entre chamadas (seguro para `useSyncExternalStore`). */
+/** UI state, immutable and stable between calls (safe for `useSyncExternalStore`). */
 export interface EngineState {
   readonly activePageId: string;
   readonly activePageIndex: number;
@@ -65,40 +65,40 @@ export interface EngineState {
 }
 
 export interface PaperCoreEvents {
-  /** O documento mudou. Use `changedPageIds` para persistir só o necessário. */
+  /** The document changed. Use `changedPageIds` to persist only what is needed. */
   change: DocumentChange;
-  /** O estado de interface mudou (ferramenta, zoom, página ativa, undo/redo…). */
+  /** The UI state changed (tool, zoom, active page, undo/redo…). */
   state: EngineState;
-  /** Erro durante uma interação (por exemplo, limite de elementos atingido). */
+  /** Error during an interaction (for example, the element limit was reached). */
   error: PaperCoreError;
-  /** Cada amostra de entrada processada (útil para depurar caneta/pressão). */
+  /** Every processed input sample (useful to debug pen/pressure). */
   input: InputSample;
 }
 
 export interface PaperCore {
   getDocument(): PaperDocument;
-  /** Substitui o documento (por exemplo, a versão vinda do servidor). Reinicia o histórico. */
+  /** Replaces the document (for example, a version loaded from storage). Resets history. */
   loadDocument(document: PaperDocument): void;
   exportJSON(): string;
-  /** Valida, migra e carrega um JSON. Lança `PaperCoreError` se for inválido. */
+  /** Validates, migrates and loads JSON. Throws `PaperCoreError` if it is invalid. */
   importJSON(json: string): void;
 
   getState(): EngineState;
   setActivePage(pageId: string): void;
-  /** Cria uma página logo após a ativa e a seleciona. Devolve o id. */
+  /** Creates a page right after the active one and selects it. Returns the id. */
   addPage(options?: { background?: PageBackground }): string;
   duplicatePage(pageId?: string): string;
-  /** Exclui a página (não pode ser desfeito). Peça confirmação ao usuário antes. */
+  /** Deletes the page (cannot be undone). Ask the user for confirmation first. */
   deletePage(pageId?: string): void;
-  /** Move a página para `toIndex` (limitado ao intervalo válido). A página ativa não muda. */
+  /** Moves the page to `toIndex` (clamped to the valid range). The active page does not change. */
   movePage(pageId: string, toIndex: number): void;
   setPageBackground(background: PageBackground, pageId?: string): void;
-  /** Remove todos os traços da página (pode ser desfeito). */
+  /** Removes every stroke from the page (can be undone). */
   clearPage(pageId?: string): void;
 
   setTool(tool: ToolName): void;
   setPenStyle(style: Partial<StrokeStyle>): void;
-  /** Diâmetro da borracha em pixels de tela (limitado por `limits.eraserSize`). */
+  /** Eraser diameter in screen pixels (clamped by `limits.eraserSize`). */
   setEraserSize(size: number): void;
   undo(): boolean;
   redo(): boolean;
@@ -106,22 +106,22 @@ export interface PaperCore {
   zoomIn(): void;
   zoomOut(): void;
   setZoom(zoom: number): void;
-  /** Volta ao zoom 1, mostrando o topo da página. */
+  /** Back to zoom 1, showing the top of the page. */
   resetView(): void;
 
   setReadOnly(readOnly: boolean): void;
 
   on<K extends keyof PaperCoreEvents>(type: K, listener: (payload: PaperCoreEvents[K]) => void): () => void;
-  /** Remove listeners, observers, frames e elementos criados. Pode ser chamado mais de uma vez. */
+  /** Removes listeners, observers, frames and created elements. Safe to call more than once. */
   destroy(): void;
 }
 
 const ZOOM_STEP = 1.25;
-/** `PointerEvent.button` da ponta de borracha de canetas digitais. */
+/** `PointerEvent.button` of the eraser end of digital pens. */
 const PEN_ERASER_BUTTON = 5;
 const WHEEL_ZOOM_SENSITIVITY = 0.0015;
 
-/** Cria o motor dentro de `container` (que precisa ter tamanho definido pelo CSS). */
+/** Creates the engine inside `container` (which needs a size defined by CSS). */
 export function createPaperCore(container: HTMLElement, options: PaperCoreOptions = {}): PaperCore {
   return new Engine(container, options);
 }
@@ -193,7 +193,7 @@ class Engine implements PaperCore {
 
     if (this.keyboardShortcuts) {
       this.layers.root.tabIndex = 0;
-      this.layers.root.setAttribute("aria-label", "Área de desenho");
+      this.layers.root.setAttribute("aria-label", "Drawing area");
       this.layers.root.addEventListener("keydown", this.onKeyDown);
       this.layers.canvases.live.addEventListener("pointerdown", this.focusSurface);
     }
@@ -207,7 +207,7 @@ class Engine implements PaperCore {
     this.renderer.setPage(this.store.getPage(this.activePageId));
   }
 
-  // ── Documento ────────────────────────────────────────────────────────────
+  // ── Document ─────────────────────────────────────────────────────────────
 
   getDocument(): PaperDocument {
     return this.store.getDocument();
@@ -227,7 +227,7 @@ class Engine implements PaperCore {
     this.loadDocument(parseDocument(json, this.store.limits));
   }
 
-  // ── Páginas ──────────────────────────────────────────────────────────────
+  // ── Pages ────────────────────────────────────────────────────────────────
 
   getState(): EngineState {
     return this.state;
@@ -236,7 +236,7 @@ class Engine implements PaperCore {
   setActivePage(pageId: string): void {
     this.assertAlive();
     if (pageId === this.activePageId) return;
-    this.store.getPage(pageId); // lança PAGE_NOT_FOUND se não existir
+    this.store.getPage(pageId); // throws PAGE_NOT_FOUND if it does not exist
     this.controller.endActive();
     this.setActivePageInternal(pageId);
   }
@@ -262,12 +262,12 @@ class Engine implements PaperCore {
     this.assertAlive();
     const pages = this.store.getDocument().pages;
     const index = pages.findIndex((p) => p.id === pageId);
-    if (index < 0) this.store.getPage(pageId); // lança PAGE_NOT_FOUND
+    if (index < 0) this.store.getPage(pageId); // throws PAGE_NOT_FOUND
     if (pageId !== this.activePageId || pages.length <= 1) {
-      this.store.deletePage(pageId); // a última página: o store lança o erro
+      this.store.deletePage(pageId); // the last page: the store throws the error
       return;
     }
-    // Ativa a vizinha ANTES de excluir: o evento "change" já sai com a página ativa correta.
+    // Activate the neighbor BEFORE deleting: the "change" event already carries the right active page.
     this.controller.cancelActive();
     const neighbor = pages[index + 1] ?? pages[index - 1]!;
     this.setActivePageInternal(neighbor.id);
@@ -277,7 +277,7 @@ class Engine implements PaperCore {
   movePage(pageId: string, toIndex: number): void {
     this.assertAlive();
     if (!Number.isInteger(toIndex))
-      throw new PaperCoreError("INVALID_ARGUMENT", "A posição da página deve ser um inteiro.");
+      throw new PaperCoreError("INVALID_ARGUMENT", "The page position must be an integer.");
     this.store.movePage(pageId, toIndex);
   }
 
@@ -291,12 +291,11 @@ class Engine implements PaperCore {
     this.store.clearPage(pageId);
   }
 
-  // ── Ferramentas e histórico ──────────────────────────────────────────────
+  // ── Tools and history ────────────────────────────────────────────────────
 
   setTool(tool: ToolName): void {
     this.assertAlive();
-    if (!(tool in this.tools))
-      throw new PaperCoreError("INVALID_ARGUMENT", `Ferramenta desconhecida: ${tool}`);
+    if (!(tool in this.tools)) throw new PaperCoreError("INVALID_ARGUMENT", `Unknown tool: ${tool}`);
     this.controller.endActive();
     this.tool = tool;
     this.refreshState();
@@ -339,7 +338,7 @@ class Engine implements PaperCore {
   }
 
   setZoom(zoom: number): void {
-    if (!Number.isFinite(zoom)) throw new PaperCoreError("INVALID_ARGUMENT", "Zoom inválido.");
+    if (!Number.isFinite(zoom)) throw new PaperCoreError("INVALID_ARGUMENT", "Invalid zoom.");
     this.zoomAroundCenter(zoom);
   }
 
@@ -348,7 +347,7 @@ class Engine implements PaperCore {
     this.applyViewport(initialState(this.metrics(), this.zoomRange(), this.viewportConfig));
   }
 
-  // ── Modo somente leitura ─────────────────────────────────────────────────
+  // ── Read-only mode ───────────────────────────────────────────────────────
 
   setReadOnly(readOnly: boolean): void {
     this.assertAlive();
@@ -357,7 +356,7 @@ class Engine implements PaperCore {
     this.refreshState();
   }
 
-  // ── Eventos e ciclo de vida ──────────────────────────────────────────────
+  // ── Events and lifecycle ─────────────────────────────────────────────────
 
   on<K extends keyof PaperCoreEvents>(type: K, listener: (payload: PaperCoreEvents[K]) => void): () => void {
     return this.emitter.on(type, listener);
@@ -376,15 +375,15 @@ class Engine implements PaperCore {
     this.emitter.clear();
   }
 
-  // ── Internos ─────────────────────────────────────────────────────────────
+  // ── Internals ─────────────────────────────────────────────────────────────
 
   private resolveTool(kind: PointerKind, button: number): Tool | null {
-    if (button === 2) return null; // botão direito
-    if (button === 1) return this.tools.pan; // botão do meio
+    if (button === 2) return null; // right button
+    if (button === 1) return this.tools.pan; // middle button
     if (this.store.isReadOnly()) return button > 2 ? null : this.tools.pan;
-    // Ponta traseira das canetas (Surface/Wacom) chega como pointerType "pen" e botão 5.
+    // The back end of pens (Surface/Wacom) arrives as pointerType "pen" with button 5.
     if (kind === "pen" && button === PEN_ERASER_BUTTON) return this.tools.eraser;
-    if (button > 2) return null; // botões extras do mouse
+    if (button > 2) return null; // extra mouse buttons
     const editing = this.tool === "pen" || this.tool === "eraser";
     if (editing && !this.policy.canDraw(kind)) return this.tools.pan;
     return this.tools[this.tool];
@@ -494,14 +493,14 @@ class Engine implements PaperCore {
 
   private normalizePen(style: StrokeStyle): StrokeStyle {
     if (!HEX_COLOR_PATTERN.test(style.color)) {
-      throw new PaperCoreError("INVALID_ARGUMENT", `Cor inválida: ${style.color} (use #rrggbb).`);
+      throw new PaperCoreError("INVALID_ARGUMENT", `Invalid color: ${style.color} (use #rrggbb).`);
     }
-    if (!Number.isFinite(style.width)) throw new PaperCoreError("INVALID_ARGUMENT", "Espessura inválida.");
+    if (!Number.isFinite(style.width)) throw new PaperCoreError("INVALID_ARGUMENT", "Invalid width.");
     return { color: style.color.toLowerCase(), width: clamp(style.width, this.store.limits.penWidth) };
   }
 
   private normalizeEraserSize(size: number): number {
-    if (!Number.isFinite(size)) throw new PaperCoreError("INVALID_ARGUMENT", "Tamanho de borracha inválido.");
+    if (!Number.isFinite(size)) throw new PaperCoreError("INVALID_ARGUMENT", "Invalid eraser size.");
     return clamp(size, this.store.limits.eraserSize);
   }
 
@@ -522,7 +521,7 @@ class Engine implements PaperCore {
     };
   }
 
-  /** Recalcula o estado e só emite se algo mudou (snapshot estável). */
+  /** Recomputes the state and only emits if something changed (stable snapshot). */
   private refreshState(): void {
     if (!this.ready || this.destroyed) return;
     const next = this.buildState();
@@ -542,6 +541,6 @@ class Engine implements PaperCore {
   }
 
   private assertAlive(): void {
-    if (this.destroyed) throw new PaperCoreError("INVALID_ARGUMENT", "O motor já foi destruído.");
+    if (this.destroyed) throw new PaperCoreError("INVALID_ARGUMENT", "The engine was already destroyed.");
   }
 }

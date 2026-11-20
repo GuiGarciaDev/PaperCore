@@ -1,4 +1,4 @@
-// API pública do PaperCore. Tudo que não é exportado aqui é interno e pode mudar sem aviso.
+// PaperCore's public API. Anything not exported here is internal and may change without notice.
 
 export { createPaperCore } from "./engine.js";
 export type { EngineState, PaperCore, PaperCoreEvents, PaperCoreOptions } from "./engine.js";

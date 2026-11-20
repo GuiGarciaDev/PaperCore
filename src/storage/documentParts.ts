@@ -16,8 +16,8 @@ export function documentMeta(doc: PaperDocument, savedAt = Date.now()): Document
 }
 
 /**
- * Monta o documento a partir da meta e das páginas gravadas, passando pela mesma migração e
- * validação estrita de uma importação: dado gravado também é dado não confiável.
+ * Assembles the document from the meta and the stored pages, going through the same migration
+ * and strict validation as an import: stored data is untrusted data too.
  */
 export function assembleDocument(
   meta: DocumentMeta,
@@ -28,8 +28,8 @@ export function assembleDocument(
   if (missing.length > 0) {
     throw new PaperCoreError(
       "STORAGE_CORRUPTED",
-      `O documento ${meta.id} está incompleto no armazenamento.`,
-      missing.map((id) => `Página ausente: ${id}`),
+      `Document ${meta.id} is incomplete in storage.`,
+      missing.map((id) => `Missing page: ${id}`),
     );
   }
   const raw = {
@@ -42,11 +42,7 @@ export function assembleDocument(
     return ensureValidDocument(migrateDocument(raw), limits);
   } catch (error) {
     if (error instanceof PaperCoreError && error.code === "INVALID_DOCUMENT") {
-      throw new PaperCoreError(
-        "STORAGE_CORRUPTED",
-        `O documento ${meta.id} gravado é inválido.`,
-        error.details,
-      );
+      throw new PaperCoreError("STORAGE_CORRUPTED", `Stored document ${meta.id} is invalid.`, error.details);
     }
     throw error;
   }

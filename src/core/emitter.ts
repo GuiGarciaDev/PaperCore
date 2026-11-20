@@ -1,8 +1,8 @@
 type Listener<T> = (payload: T) => void;
 
 /**
- * Emissor de eventos tipado e mínimo.
- * Um listener que lança erro não impede os demais. O primeiro erro é relançado no final.
+ * Minimal typed event emitter.
+ * A listener that throws does not stop the others. The first error is rethrown at the end.
  */
 export class Emitter<Events extends object> {
   private readonly listeners = new Map<keyof Events, Set<Listener<never>>>();

@@ -3,19 +3,19 @@ import { strokeOutline } from "../core/geometry/strokeOutline.js";
 import type { StrokeElement } from "../core/types.js";
 
 /**
- * Caminhos de um traço. O contorno e os reforços das juntas ficam em Path2D SEPARADOS e são
- * preenchidos em chamadas separadas: no mesmo caminho, com a regra "nonzero", um círculo de
- * junta com sentido de giro oposto ao do contorno (comum em curvas fechadas de traços grossos)
- * cancela o preenchimento e vira um buraco. A tinta é opaca, então pintar duas vezes não muda
- * a cor.
+ * Paths of a stroke. The outline and the joint reinforcements live in SEPARATE Path2Ds and are
+ * filled in separate calls: in a single path, with the "nonzero" rule, a joint circle whose
+ * winding is opposite to the outline's (common on tight curves of thick strokes) cancels the
+ * fill and becomes a hole. Ink is opaque, so painting twice does not change the
+ * color.
  */
 export interface StrokePaths {
   readonly outline: Path2D;
-  /** Todos os círculos de junta (mesmo sentido de giro entre si). `null` se não houver. */
+  /** All joint circles (same winding among themselves). `null` if there are none. */
   readonly joints: Path2D | null;
 }
 
-/** Elementos são imutáveis, então a WeakMap nunca fica desatualizada. */
+/** Elements are immutable, so the WeakMap never goes stale. */
 const pathCache = new WeakMap<StrokeElement, StrokePaths>();
 
 export function geometryToPaths(geometry: StrokeGeometry): StrokePaths {

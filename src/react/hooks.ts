@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
-// A camada React só usa a API pública do pacote (ADR-0002).
+// The React layer only uses the package's public API.
 import { createPaperCore, type EngineState, type PaperCore, type PaperCoreOptions } from "../index.js";
 
 /**
- * Cria a engine num elemento e a destrói ao desmontar. Devolve um callback ref para o container e
- * a engine (null até montar).
+ * Creates the engine on an element and destroys it on unmount. Returns a callback ref for the
+ * container and the engine (null until mounted).
  *
- * As opções são lidas só na criação (como o `defaultValue` de um input): para trocar o documento
- * depois, use `engine.loadDocument`. Em StrictMode o React monta, desmonta e monta de novo: a
- * primeira engine é destruída (destroy é idempotente) e uma nova é criada, sem vazamentos.
+ * Options are read only on creation (like an input's `defaultValue`): to change the document
+ * later, use `engine.loadDocument`. In StrictMode React mounts, unmounts and mounts again: the
+ * first engine is destroyed (destroy is idempotent) and a new one is created, with no leaks.
  */
 export function useDrawingEngine(options?: PaperCoreOptions): {
   ref: (element: HTMLElement | null) => void;
@@ -34,9 +34,9 @@ export function useDrawingEngine(options?: PaperCoreOptions): {
 }
 
 /**
- * Estado de interface da engine (ferramenta, zoom, página ativa, undo/redo…), re-renderizando só
- * quando ele muda. `getState()` devolve o mesmo objeto enquanto nada muda, como o
- * `useSyncExternalStore` exige.
+ * The engine's UI state (tool, zoom, active page, undo/redo…), re-rendering only when it
+ * changes. `getState()` returns the same object while nothing changes, as
+ * `useSyncExternalStore` requires.
  */
 export function useEngineState(engine: PaperCore | null): EngineState | null {
   const subscribe = useCallback(

@@ -1,9 +1,9 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const stats = (page: Page) => page.locator("#stats");
-const strokeCount = (n: number) => new RegExp(`Traços na página: ${n} `);
+const strokeCount = (n: number) => new RegExp(`Strokes on page: ${n} `);
 
-/** Desenha uma onda horizontal com o mouse, no meio da área visível da página. */
+/** Draws a horizontal wave with the mouse, in the middle of the visible page area. */
 async function drawWave(page: Page, y = 300) {
   const box = (await page.locator('canvas[data-layer="live"]').boundingBox())!;
   const x0 = box.x + box.width * 0.3;
@@ -17,7 +17,7 @@ async function drawWave(page: Page, y = 300) {
   await page.mouse.up();
 }
 
-/** Passa a borracha de cima a baixo, cruzando a onda no meio. */
+/** Sweeps the eraser top to bottom, crossing the wave in the middle. */
 async function eraseVertical(page: Page, y = 300) {
   const box = (await page.locator('canvas[data-layer="live"]').boundingBox())!;
   const x = box.x + box.width * 0.5;
@@ -29,64 +29,64 @@ async function eraseVertical(page: Page, y = 300) {
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("#save-info")).toHaveText("Salvo localmente");
+  await expect(page.locator("#save-info")).toHaveText("Saved locally");
 });
 
-test("desenha, desfaz e refaz", async ({ page }) => {
+test("draws, undoes and redoes", async ({ page }) => {
   await drawWave(page);
   await expect(stats(page)).toContainText(strokeCount(1));
-  await page.getByRole("button", { name: "Desfazer" }).click();
+  await page.getByRole("button", { name: "Undo" }).click();
   await expect(stats(page)).toContainText(strokeCount(0));
-  await page.getByRole("button", { name: "Refazer" }).click();
+  await page.getByRole("button", { name: "Redo" }).click();
   await expect(stats(page)).toContainText(strokeCount(1));
 });
 
-test("a borracha corta o traço em dois e um undo restaura", async ({ page }) => {
+test("the eraser cuts the stroke in two and one undo restores it", async ({ page }) => {
   await drawWave(page);
-  await page.getByRole("button", { name: "Borracha" }).click();
+  await page.getByRole("button", { name: "Eraser" }).click();
   await eraseVertical(page);
   await expect(stats(page)).toContainText(strokeCount(2));
-  await page.getByRole("button", { name: "Desfazer" }).click();
+  await page.getByRole("button", { name: "Undo" }).click();
   await expect(stats(page)).toContainText(strokeCount(1));
 });
 
-test("o documento persiste ao recarregar (IndexedDB + autosave)", async ({ page }) => {
+test("the document persists across reloads (IndexedDB + autosave)", async ({ page }) => {
   await drawWave(page);
-  await expect(page.locator("#save-info")).toHaveText("Salvo localmente");
+  await expect(page.locator("#save-info")).toHaveText("Saved locally");
   await page.reload();
   await expect(stats(page)).toContainText(strokeCount(1));
 });
 
-test("páginas: criar, navegar e excluir com confirmação", async ({ page }) => {
-  await page.getByRole("button", { name: "Página", exact: true }).click();
+test("pages: create, navigate and delete with confirmation", async ({ page }) => {
+  await page.getByRole("button", { name: "Page", exact: true }).click();
   await expect(page.locator("#page-label")).toHaveText("2 / 2");
   await drawWave(page);
-  await page.getByRole("button", { name: "Página anterior" }).click();
+  await page.getByRole("button", { name: "Previous page" }).click();
   await expect(page.locator("#page-label")).toHaveText("1 / 2");
   await expect(stats(page)).toContainText(strokeCount(0));
 
-  await page.getByRole("button", { name: "Excluir página" }).click();
-  await page.getByRole("button", { name: "Cancelar" }).click();
+  await page.getByRole("button", { name: "Delete page" }).click();
+  await page.getByRole("button", { name: "Cancel" }).click();
   await expect(page.locator("#page-label")).toHaveText("1 / 2");
 
-  await page.getByRole("button", { name: "Excluir página" }).click();
+  await page.getByRole("button", { name: "Delete page" }).click();
   await page.locator("#confirm-ok").click();
   await expect(page.locator("#page-label")).toHaveText("1 / 1");
-  // Sobrou a página que tinha o traço.
+  // The page with the stroke is the one left.
   await expect(stats(page)).toContainText(strokeCount(1));
 });
 
-test("somente leitura: o arraste move a página em vez de desenhar", async ({ page }) => {
+test("read-only: dragging pans the page instead of drawing", async ({ page }) => {
   await page.locator(".toggle").click();
   await drawWave(page);
   await expect(stats(page)).toContainText(strokeCount(0));
-  await expect(page.getByRole("button", { name: "Excluir página" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Delete page" })).toBeDisabled();
 });
 
-test("traços grossos em curva não têm buracos (regressão)", async ({ page }) => {
+test("thick curved strokes have no holes (regression)", async ({ page }) => {
   await page.locator("#width").fill("12");
   await drawWave(page);
-  // Amostra a camada de conteúdo ao longo da linha central da onda: tudo pintado.
+  // Samples the content layer along the wave's center line: everything is painted.
   const unpainted = await page.evaluate(() => {
     const canvas = document.querySelector<HTMLCanvasElement>('canvas[data-layer="content"]')!;
     const ctx = canvas.getContext("2d")!;

@@ -3,27 +3,27 @@ import type { PaperCore, PaperCoreOptions } from "../index.js";
 import { useDrawingEngine } from "./hooks.js";
 
 export interface DrawingSurfaceProps {
-  /** Lidas só na montagem (ver `useDrawingEngine`). */
+  /** Read on mount only (see `useDrawingEngine`). */
   options?: PaperCoreOptions;
-  /** Recebe a engine ao montar e `null` ao desmontar. */
+  /** Receives the engine on mount and `null` on unmount. */
   onEngine?: (engine: PaperCore | null) => void;
   className?: string;
   style?: CSSProperties;
-  /** Rótulo acessível da área de escrita. */
+  /** Accessible label of the writing area. */
   "aria-label"?: string;
 }
 
 /**
- * Área de escrita do PaperCore como componente React. O container precisa de tamanho definido
- * (por padrão ocupa 100% do pai). Toolbar, páginas e zoom ficam com a aplicação, que usa o próprio
- * design system e controla a engine recebida em `onEngine`.
+ * PaperCore's writing area as a React component. The container needs a defined size
+ * (by default it fills 100% of its parent). Toolbar, pages and zoom belong to the app, which uses
+ * its own design system and drives the engine received in `onEngine`.
  */
 export function DrawingSurface({
   options,
   onEngine,
   className,
   style,
-  "aria-label": ariaLabel = "Caderno",
+  "aria-label": ariaLabel = "Notebook",
 }: DrawingSurfaceProps) {
   const { ref, engine } = useDrawingEngine(options);
 
@@ -31,7 +31,7 @@ export function DrawingSurface({
     if (!engine) return;
     onEngine?.(engine);
     return () => onEngine?.(null);
-  }, [engine]); // onEngine fora de propósito: trocar o callback não deve notificar de novo.
+  }, [engine]); // onEngine left out on purpose: swapping the callback must not notify again.
 
   return (
     <div

@@ -10,7 +10,7 @@ import {
 
 export type ValidationResult<T> = { ok: true; value: T } | { ok: false; errors: string[] };
 
-/** Evita listas gigantes de erro para documentos muito malformados. */
+/** Avoids huge error lists for badly malformed documents. */
 const MAX_ERRORS = 50;
 
 class Collector {
@@ -31,13 +31,13 @@ function isObject(value: unknown): value is Obj {
 
 function checkKeys(value: Obj, allowed: readonly string[], path: string, c: Collector): void {
   for (const key of Object.keys(value)) {
-    if (!allowed.includes(key)) c.add(`${path}: campo desconhecido "${key}"`);
+    if (!allowed.includes(key)) c.add(`${path}: unknown field "${key}"`);
   }
 }
 
 function readId(value: unknown, path: string, c: Collector): string {
   if (typeof value !== "string" || !ID_PATTERN.test(value)) {
-    c.add(`${path}: id inválido (esperado [A-Za-z0-9_-], 1 a 64 caracteres)`);
+    c.add(`${path}: invalid id (expected [A-Za-z0-9_-], 1 to 64 characters)`);
     return "";
   }
   return value;
@@ -45,7 +45,7 @@ function readId(value: unknown, path: string, c: Collector): string {
 
 function readColor(value: unknown, path: string, c: Collector): string {
   if (typeof value !== "string" || !HEX_COLOR_PATTERN.test(value)) {
-    c.add(`${path}: cor inválida (esperado #rrggbb)`);
+    c.add(`${path}: invalid color (expected #rrggbb)`);
     return "#000000";
   }
   return value.toLowerCase();
@@ -53,18 +53,18 @@ function readColor(value: unknown, path: string, c: Collector): string {
 
 function readNumber(value: unknown, range: Range, path: string, c: Collector): number {
   if (typeof value !== "number" || !Number.isFinite(value)) {
-    c.add(`${path}: número inválido`);
+    c.add(`${path}: invalid number`);
     return range.min;
   }
   if (value < range.min || value > range.max) {
-    c.add(`${path}: ${value} fora do intervalo [${range.min}, ${range.max}]`);
+    c.add(`${path}: ${value} out of range [${range.min}, ${range.max}]`);
   }
   return value;
 }
 
 function readSize(value: unknown, limits: PaperLimits, path: string, c: Collector): Size {
   if (!isObject(value)) {
-    c.add(`${path}: tamanho ausente`);
+    c.add(`${path}: missing size`);
     return { width: limits.pageSize.min, height: limits.pageSize.min };
   }
   checkKeys(value, ["width", "height"], path, c);
@@ -76,7 +76,7 @@ function readSize(value: unknown, limits: PaperLimits, path: string, c: Collecto
 
 function readBackground(value: unknown, limits: PaperLimits, path: string, c: Collector): PageBackground {
   if (!isObject(value)) {
-    c.add(`${path}: fundo ausente`);
+    c.add(`${path}: missing background`);
     return { type: "blank", color: "#ffffff" };
   }
   if (value.type === "blank") {
@@ -93,21 +93,21 @@ function readBackground(value: unknown, limits: PaperLimits, path: string, c: Co
       lineWidth: readNumber(value.lineWidth, limits.backgroundLineWidth, `${path}.lineWidth`, c),
     };
   }
-  c.add(`${path}.type: tipo de fundo desconhecido`);
+  c.add(`${path}.type: unknown background type`);
   return { type: "blank", color: "#ffffff" };
 }
 
 function readPoints(value: unknown, size: Size, limits: PaperLimits, path: string, c: Collector): number[] {
   if (!Array.isArray(value)) {
-    c.add(`${path}: esperado array de números`);
+    c.add(`${path}: expected an array of numbers`);
     return [];
   }
   if (value.length === 0 || value.length % POINT_STRIDE !== 0) {
-    c.add(`${path}: tamanho deve ser múltiplo de ${POINT_STRIDE} e maior que zero`);
+    c.add(`${path}: length must be a multiple of ${POINT_STRIDE} and greater than zero`);
     return [];
   }
   if (value.length / POINT_STRIDE > limits.maxPointsPerStroke) {
-    c.add(`${path}: mais de ${limits.maxPointsPerStroke} pontos`);
+    c.add(`${path}: more than ${limits.maxPointsPerStroke} points`);
     return [];
   }
   const out = new Array<number>(value.length);
@@ -123,7 +123,7 @@ function readPoints(value: unknown, size: Size, limits: PaperLimits, path: strin
       !(y >= 0 && y <= size.height) ||
       !(p >= 0 && p <= 1)
     ) {
-      c.add(`${path}[${i}]: ponto inválido ou fora da página`);
+      c.add(`${path}[${i}]: invalid point or outside the page`);
       return [];
     }
     out[i] = x;
@@ -141,11 +141,11 @@ function readElement(
   c: Collector,
 ): PaperElement | null {
   if (!isObject(value)) {
-    c.add(`${path}: elemento inválido`);
+    c.add(`${path}: invalid element`);
     return null;
   }
   if (value.type !== "stroke") {
-    c.add(`${path}.type: tipo de elemento desconhecido "${String(value.type)}"`);
+    c.add(`${path}.type: unknown element type "${String(value.type)}"`);
     return null;
   }
   checkKeys(value, ["id", "type", "style", "hasPressure", "points"], path, c);
@@ -157,9 +157,9 @@ function readElement(
     color = readColor(style.color, `${path}.style.color`, c);
     width = readNumber(style.width, limits.penWidth, `${path}.style.width`, c);
   } else {
-    c.add(`${path}.style: ausente`);
+    c.add(`${path}.style: missing`);
   }
-  if (typeof value.hasPressure !== "boolean") c.add(`${path}.hasPressure: esperado booleano`);
+  if (typeof value.hasPressure !== "boolean") c.add(`${path}.hasPressure: expected a boolean`);
   return {
     id: readId(value.id, `${path}.id`, c),
     type: "stroke",
@@ -171,16 +171,16 @@ function readElement(
 
 function readPage(value: unknown, limits: PaperLimits, path: string, c: Collector): PaperPage | null {
   if (!isObject(value)) {
-    c.add(`${path}: página inválida`);
+    c.add(`${path}: invalid page`);
     return null;
   }
   checkKeys(value, ["id", "size", "background", "elements"], path, c);
   const size = readSize(value.size, limits, `${path}.size`, c);
   const elements: PaperElement[] = [];
   if (!Array.isArray(value.elements)) {
-    c.add(`${path}.elements: esperado array`);
+    c.add(`${path}.elements: expected an array`);
   } else if (value.elements.length > limits.maxElementsPerPage) {
-    c.add(`${path}.elements: mais de ${limits.maxElementsPerPage} elementos`);
+    c.add(`${path}.elements: more than ${limits.maxElementsPerPage} elements`);
   } else {
     for (let i = 0; i < value.elements.length && !c.full; i++) {
       const element = readElement(value.elements[i], size, limits, `${path}.elements[${i}]`, c);
@@ -196,25 +196,25 @@ function readPage(value: unknown, limits: PaperLimits, path: string, c: Collecto
 }
 
 /**
- * Valida um documento de forma estrita e devolve uma CÓPIA normalizada, montada só com campos
- * conhecidos. Nada do objeto de entrada é reaproveitado por referência.
+ * Validates a document strictly and returns a normalized COPY, built only from known fields.
+ * Nothing from the input object is reused by reference.
  */
 export function validateDocument(input: unknown, limits: PaperLimits): ValidationResult<PaperDocument> {
   const c = new Collector();
-  if (!isObject(input)) return { ok: false, errors: ["documento: esperado um objeto"] };
+  if (!isObject(input)) return { ok: false, errors: ["document: expected an object"] };
 
-  checkKeys(input, ["id", "schemaVersion", "defaultPageSize", "pages"], "documento", c);
+  checkKeys(input, ["id", "schemaVersion", "defaultPageSize", "pages"], "document", c);
   if (input.schemaVersion !== CURRENT_SCHEMA_VERSION) {
-    c.add(`documento.schemaVersion: esperado ${CURRENT_SCHEMA_VERSION} (migre antes de validar)`);
+    c.add(`document.schemaVersion: expected ${CURRENT_SCHEMA_VERSION} (migrate before validating)`);
   }
-  const id = readId(input.id, "documento.id", c);
-  const defaultPageSize = readSize(input.defaultPageSize, limits, "documento.defaultPageSize", c);
+  const id = readId(input.id, "document.id", c);
+  const defaultPageSize = readSize(input.defaultPageSize, limits, "document.defaultPageSize", c);
 
   const pages: PaperPage[] = [];
   if (!Array.isArray(input.pages) || input.pages.length === 0) {
-    c.add("documento.pages: o documento precisa de pelo menos uma página");
+    c.add("document.pages: the document needs at least one page");
   } else if (input.pages.length > limits.maxPages) {
-    c.add(`documento.pages: mais de ${limits.maxPages} páginas`);
+    c.add(`document.pages: more than ${limits.maxPages} pages`);
   } else {
     for (let i = 0; i < input.pages.length && !c.full; i++) {
       const page = readPage(input.pages[i], limits, `pages[${i}]`, c);
@@ -225,10 +225,10 @@ export function validateDocument(input: unknown, limits: PaperLimits): Validatio
   const seen = new Set<string>();
   const checkUnique = (value: string, path: string) => {
     if (!value) return;
-    if (seen.has(value)) c.add(`${path}: id duplicado "${value}"`);
+    if (seen.has(value)) c.add(`${path}: duplicate id "${value}"`);
     seen.add(value);
   };
-  checkUnique(id, "documento.id");
+  checkUnique(id, "document.id");
   pages.forEach((page, p) => {
     checkUnique(page.id, `pages[${p}].id`);
     page.elements.forEach((element, e) => checkUnique(element.id, `pages[${p}].elements[${e}].id`));
@@ -238,22 +238,22 @@ export function validateDocument(input: unknown, limits: PaperLimits): Validatio
   return { ok: true, value: { id, schemaVersion: CURRENT_SCHEMA_VERSION, defaultPageSize, pages } };
 }
 
-/** Valida um elemento isolado contra o tamanho da página. */
+/** Validates a single element against the page size. */
 export function validateElement(
   input: unknown,
   pageSize: Size,
   limits: PaperLimits,
 ): ValidationResult<PaperElement> {
   const c = new Collector();
-  const element = readElement(input, pageSize, limits, "elemento", c);
+  const element = readElement(input, pageSize, limits, "element", c);
   if (!element || c.errors.length > 0) return { ok: false, errors: c.errors };
   return { ok: true, value: element };
 }
 
-/** Valida um fundo de página. */
+/** Validates a page background. */
 export function validateBackground(input: unknown, limits: PaperLimits): ValidationResult<PageBackground> {
   const c = new Collector();
-  const background = readBackground(input, limits, "fundo", c);
+  const background = readBackground(input, limits, "background", c);
   if (c.errors.length > 0) return { ok: false, errors: c.errors };
   return { ok: true, value: background };
 }

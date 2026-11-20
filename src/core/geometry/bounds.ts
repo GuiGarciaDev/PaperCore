@@ -9,7 +9,7 @@ export interface Rect {
   readonly maxY: number;
 }
 
-/** Cache em memória: elementos são imutáveis, então a WeakMap é segura e nunca vai para o documento. */
+/** In-memory cache: elements are immutable, so the WeakMap is safe and never ends up in the document. */
 const cache = new WeakMap<PaperElement, Rect>();
 
 export function elementBounds(element: PaperElement): Rect {

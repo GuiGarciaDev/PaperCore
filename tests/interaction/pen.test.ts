@@ -11,8 +11,8 @@ function setup(limits?: PartialLimits) {
   return { ...tool, pen: new PenTool(tool.ctx) };
 }
 
-describe("caneta", () => {
-  it("um gesto completo vira UMA operação/elemento com o estilo atual", () => {
+describe("pen", () => {
+  it("a complete gesture becomes ONE operation/element with the current style", () => {
     const { pen, strokes, store, pageId } = setup();
     pen.begin(sample(10, 10));
     pen.move([sample(20, 20), sample(30, 25)]);
@@ -25,7 +25,7 @@ describe("caneta", () => {
     expect(strokes()).toHaveLength(0);
   });
 
-  it("registra pressão real da caneta e marca hasPressure", () => {
+  it("records real pen pressure and sets hasPressure", () => {
     const { pen, strokes } = setup();
     pen.begin(sample(10, 10, "pen", 0.2));
     pen.move([sample(20, 10, "pen", 0.9)]);
@@ -34,7 +34,7 @@ describe("caneta", () => {
     expect(strokes()[0]!.points).toEqual([10, 10, 0.2, 20, 10, 0.9]);
   });
 
-  it("descarta pontos redundantes, mas mantém o ponto final exato", () => {
+  it("drops redundant points but keeps the exact final point", () => {
     const { pen, strokes } = setup();
     pen.begin(sample(10, 10));
     pen.move([sample(10.1, 10.1), sample(10.2, 10.2), sample(10.3, 10.3)]);
@@ -42,7 +42,7 @@ describe("caneta", () => {
     expect(strokes()[0]!.points).toEqual([10, 10, 0.5, 10.3, 10.3, 0.5]);
   });
 
-  it("quantiza em 2 casas e recorta pontos fora da página", () => {
+  it("quantizes to 2 decimals and clamps points outside the page", () => {
     const { pen, strokes } = setup();
     pen.begin(sample(-50, 10.12345));
     pen.move([sample(5000, 99999)]);
@@ -50,7 +50,7 @@ describe("caneta", () => {
     expect(strokes()[0]!.points).toEqual([0, 10.12, 0.5, 1000, 1414, 0.5]);
   });
 
-  it("cancelar descarta o traço e limpa a camada ao vivo", () => {
+  it("cancelling discards the stroke and clears the live layer", () => {
     const { pen, strokes, live } = setup();
     pen.begin(sample(10, 10));
     pen.move([sample(50, 50)]);
@@ -59,7 +59,7 @@ describe("caneta", () => {
     expect(live.at(-1)).toBeNull();
   });
 
-  it("atualiza a camada ao vivo durante o traço", () => {
+  it("updates the live layer while drawing", () => {
     const { pen, live } = setup();
     pen.begin(sample(10, 10));
     pen.move([sample(50, 50)]);
@@ -67,14 +67,14 @@ describe("caneta", () => {
     expect(live.at(-1)?.color).toBe("#ff0000");
   });
 
-  it("ao atingir o limite de pontos continua em um novo traço sem perder amostras", () => {
+  it("reaching the point limit continues in a new stroke without losing samples", () => {
     const { pen, strokes } = setup({ maxPointsPerStroke: 5 });
     pen.begin(sample(0, 0));
     pen.move(Array.from({ length: 11 }, (_, i) => sample((i + 1) * 10, 0)));
     pen.end();
     const all = strokes();
     expect(all.length).toBeGreaterThan(1);
-    // Os traços se encadeiam: cada um começa onde o anterior terminou.
+    // Strokes chain together: each one starts where the previous one ended.
     for (let i = 1; i < all.length; i++) {
       const prev = all[i - 1]!.points;
       expect(all[i]!.points.slice(0, 2)).toEqual(prev.slice(-3, -1));
@@ -83,7 +83,7 @@ describe("caneta", () => {
     expect(all.every((s) => s.points.length / 3 <= 5)).toBe(true);
   });
 
-  it("em somente leitura não confirma o traço", () => {
+  it("does not commit the stroke in read-only mode", () => {
     const { pen, strokes, store } = setup();
     pen.begin(sample(10, 10));
     store.setReadOnly(true);
@@ -93,7 +93,7 @@ describe("caneta", () => {
 });
 
 describe("pan", () => {
-  it("converte o arrasto em deslocamento de tela", () => {
+  it("turns the drag into a screen offset", () => {
     const { ctx, pans } = setup();
     const pan = new PanTool(ctx);
     pan.begin(sample(10, 10));
@@ -103,15 +103,15 @@ describe("pan", () => {
   });
 });
 
-describe("entrada", () => {
-  it("só a caneta tem pressão; pressão zero vira o mínimo", () => {
+describe("input", () => {
+  it("only the pen has pressure; zero pressure becomes the minimum", () => {
     expect(normalizePressure("mouse", 0.8)).toEqual({ pressure: 0.5, hasPressure: false });
     expect(normalizePressure("touch", 1)).toEqual({ pressure: 0.5, hasPressure: false });
     expect(normalizePressure("pen", 0)).toEqual({ pressure: 0.05, hasPressure: true });
     expect(normalizePressure("pen", 0.7)).toEqual({ pressure: 0.7, hasPressure: true });
   });
 
-  it("converte o evento em coordenadas lógicas usando a transformação recebida", () => {
+  it("converts the event to logical coordinates using the given transform", () => {
     const s = toInputSample(
       { clientX: 110, clientY: 220, pressure: 0.4, pointerType: "pen", timeStamp: 5 },
       { left: 10, top: 20 },
@@ -120,7 +120,7 @@ describe("entrada", () => {
     expect(s).toMatchObject({ screenX: 100, screenY: 200, x: 50, y: 100, kind: "pen", pressure: 0.4 });
   });
 
-  it("rejeição de palma: depois de ver uma caneta, o toque não desenha", () => {
+  it("palm rejection: after seeing a pen, touch does not draw", () => {
     const policy = new PointerPolicy();
     expect(policy.canDraw("touch")).toBe(true);
     policy.observe("pen");
@@ -128,7 +128,7 @@ describe("entrada", () => {
     expect(policy.canDraw("pen")).toBe(true);
   });
 
-  it("respeita a lista de ponteiros que podem desenhar", () => {
+  it("respects the list of pointers allowed to draw", () => {
     const policy = new PointerPolicy({ drawWith: ["pen"], palmRejection: false });
     expect(policy.canDraw("mouse")).toBe(false);
     expect(policy.canDraw("pen")).toBe(true);

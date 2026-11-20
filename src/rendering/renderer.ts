@@ -11,7 +11,7 @@ export interface LiveStroke {
   readonly color: string;
 }
 
-/** Círculo da borracha, em coordenadas lógicas. */
+/** Eraser circle, in logical coordinates. */
 export interface EraserCursor {
   readonly x: number;
   readonly y: number;
@@ -31,8 +31,8 @@ const DEFAULT_THEME: RendererTheme = {
 };
 
 /**
- * Desenha a página ativa nas três camadas. Cada camada só é redesenhada quando fica "suja",
- * e no máximo uma vez por frame (requestAnimationFrame).
+ * Draws the active page on the three layers. Each layer is only redrawn when it gets "dirty",
+ * and at most once per frame (requestAnimationFrame).
  */
 export class Renderer {
   private page: PaperPage | null = null;
@@ -43,7 +43,7 @@ export class Renderer {
   private dirty = { background: true, content: true, live: true };
   private frame: number | null = null;
   private destroyed = false;
-  /** Contadores para medir quanto trabalho de renderização acontece (útil em testes e no playground). */
+  /** Counters that measure how much rendering work happens (useful in tests and the playground). */
   readonly stats = { frames: 0, backgroundDraws: 0, contentDraws: 0, liveDraws: 0, lastContentElements: 0 };
 
   constructor(
@@ -81,7 +81,7 @@ export class Renderer {
     this.schedule();
   }
 
-  /** Desenha imediatamente o que estiver sujo (normalmente chamado pelo rAF). */
+  /** Immediately draws whatever is dirty (normally called by rAF). */
   renderNow(): void {
     this.frame = null;
     if (this.destroyed || !this.page) return;
@@ -146,7 +146,7 @@ export class Renderer {
       path.moveTo(x, 0);
       path.lineTo(x, height);
     }
-    // Pelo menos 1 pixel físico, para as linhas não sumirem em zoom baixo.
+    // At least 1 physical pixel, so lines do not vanish at low zoom.
     ctx.lineWidth = Math.max(page.background.lineWidth, 1 / (this.transform.scale * this.size.pixelRatio));
     ctx.strokeStyle = page.background.lineColor;
     ctx.stroke(path);
@@ -184,7 +184,7 @@ export class Renderer {
       ctx.arc(x, y, radius, 0, Math.PI * 2);
       ctx.fillStyle = this.theme.eraserFill;
       ctx.fill();
-      // Contorno com 1 pixel de tela em qualquer zoom.
+      // 1 screen pixel outline at any zoom.
       ctx.lineWidth = 1 / this.transform.scale;
       ctx.strokeStyle = this.theme.eraserStroke;
       ctx.stroke();

@@ -2,9 +2,9 @@ import { vi } from "vitest";
 import { createPaperCore, type PaperCore, type PaperCoreOptions } from "../../src/engine.js";
 
 /**
- * Ambiente mínimo para a engine no happy-dom: o happy-dom não implementa Canvas 2D, então o
- * contexto vira um objeto que aceita qualquer chamada, e o Path2D, uma classe vazia. Os testes
- * da engine verificam estado e eventos, não pixels (os pixels são verificados no navegador).
+ * Minimal environment for the engine in happy-dom: happy-dom does not implement Canvas 2D, so the
+ * context becomes an object that accepts any call, and Path2D an empty class. Engine tests check
+ * state and events, not pixels (pixels are checked in the browser).
  */
 export function installCanvasStubs(): void {
   const noop = () => undefined;
@@ -32,7 +32,7 @@ export function installCanvasStubs(): void {
   );
 }
 
-/** Cria a engine num container com tamanho (o happy-dom não faz layout). */
+/** Creates the engine in a sized container (happy-dom does no layout). */
 export function mountEngine(options: PaperCoreOptions = {}): { engine: PaperCore; container: HTMLElement } {
   const container = document.createElement("div");
   document.body.appendChild(container);

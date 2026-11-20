@@ -18,7 +18,7 @@ function setup(options?: ConstructorParameters<typeof PaperStore>[1]) {
 }
 
 describe("PaperStore", () => {
-  it("aplica, desfaz e refaz um traço", () => {
+  it("applies, undoes and redoes a stroke", () => {
     const { store, firstPageId, draw } = setup();
     const s = draw();
     expect(store.getPage(firstPageId).elements).toEqual([s]);
@@ -28,7 +28,7 @@ describe("PaperStore", () => {
     expect(store.getPage(firstPageId).elements).toEqual([s]);
   });
 
-  it("quem ouve change já vê o histórico atualizado (canUndo/canRedo)", () => {
+  it("change listeners already see up-to-date history (canUndo/canRedo)", () => {
     const { store, firstPageId, draw } = setup();
     const seen: [boolean, boolean][] = [];
     store.on("change", () => seen.push([store.canUndo(firstPageId), store.canRedo(firstPageId)]));
@@ -42,7 +42,7 @@ describe("PaperStore", () => {
     ]);
   });
 
-  it("uma nova ação descarta o redo", () => {
+  it("a new action clears redo", () => {
     const { store, firstPageId, draw } = setup();
     draw();
     store.undo(firstPageId);
@@ -50,7 +50,7 @@ describe("PaperStore", () => {
     expect(store.canRedo(firstPageId)).toBe(false);
   });
 
-  it("mantém um histórico independente por página", () => {
+  it("keeps independent history per page", () => {
     const { store, firstPageId, draw } = setup();
     const second = store.addPage();
     draw(firstPageId);
@@ -61,7 +61,7 @@ describe("PaperStore", () => {
     expect(store.canUndo(second.id)).toBe(true);
   });
 
-  it("respeita o limite de histórico por página", () => {
+  it("respects the per-page history limit", () => {
     const { store, firstPageId, draw } = setup({ limits: { maxHistoryPerPage: 3 } });
     for (let i = 0; i < 5; i++) draw();
     let undos = 0;
@@ -70,7 +70,7 @@ describe("PaperStore", () => {
     expect(store.getPage(firstPageId).elements).toHaveLength(2);
   });
 
-  it("atualizações são imutáveis: snapshots antigos não mudam", () => {
+  it("updates are immutable: old snapshots do not change", () => {
     const { store, draw } = setup();
     const before = store.getDocument();
     draw();
@@ -78,7 +78,7 @@ describe("PaperStore", () => {
     expect(store.getDocument()).not.toBe(before);
   });
 
-  it("emite change com o motivo e as páginas afetadas", () => {
+  it("emits change with the reason and the affected pages", () => {
     const { store, changes, firstPageId, draw } = setup();
     draw();
     store.undo(firstPageId);
@@ -86,24 +86,24 @@ describe("PaperStore", () => {
     expect(changes[0]!.changedPageIds).toEqual([firstPageId]);
   });
 
-  it("em somente leitura bloqueia toda mutação, inclusive undo", () => {
+  it("read-only blocks every mutation, including undo", () => {
     const { store, firstPageId, draw } = setup();
     draw();
     store.setReadOnly(true);
-    expect(() => draw()).toThrow(/somente leitura/);
-    expect(() => store.addPage()).toThrow(/somente leitura/);
-    expect(() => store.undo(firstPageId)).toThrow(/somente leitura/);
+    expect(() => draw()).toThrow(/read-only/);
+    expect(() => store.addPage()).toThrow(/read-only/);
+    expect(() => store.undo(firstPageId)).toThrow(/read-only/);
     expect(store.canUndo(firstPageId)).toBe(false);
     store.setReadOnly(false);
     expect(store.canUndo(firstPageId)).toBe(true);
   });
 
-  it("não exclui a última página", () => {
+  it("does not delete the last page", () => {
     const { store, firstPageId } = setup();
-    expect(() => store.deletePage(firstPageId)).toThrow(/pelo menos uma página/);
+    expect(() => store.deletePage(firstPageId)).toThrow(/at least one page/);
   });
 
-  it("excluir uma página emite deletedPageIds e descarta o histórico dela", () => {
+  it("deleting a page emits deletedPageIds and drops its history", () => {
     const { store, changes, draw } = setup();
     const second = store.addPage();
     draw(second.id);
@@ -112,7 +112,7 @@ describe("PaperStore", () => {
     expect(store.canUndo(second.id)).toBe(false);
   });
 
-  it("duplica com novos ids, logo após a original", () => {
+  it("duplicates with new ids, right after the original", () => {
     const { store, firstPageId, draw } = setup();
     const s = draw();
     const copy = store.duplicatePage(firstPageId);
@@ -122,14 +122,14 @@ describe("PaperStore", () => {
     expect(copy.elements[0]!.points).toEqual(s.points);
   });
 
-  it("move páginas", () => {
+  it("moves pages", () => {
     const { store, firstPageId } = setup();
     store.addPage();
     store.movePage(firstPageId, 1);
     expect(store.getDocument().pages[1]!.id).toBe(firstPageId);
   });
 
-  it("troca o fundo sem tocar nos elementos", () => {
+  it("changes the background without touching the elements", () => {
     const { store, firstPageId, draw } = setup();
     const s = draw();
     store.setPageBackground(firstPageId, createBackground("grid", { spacing: 40 }));
@@ -138,14 +138,14 @@ describe("PaperStore", () => {
     expect(page.elements).toEqual([s]);
   });
 
-  it("rejeita fundo e elementos inválidos", () => {
+  it("rejects invalid backgrounds and elements", () => {
     const { store, firstPageId } = setup();
     expect(() => store.setPageBackground(firstPageId, { type: "blank", color: "red" })).toThrow();
     const bad = stroke({ points: [99999, 0, 0.5] });
     expect(() => store.apply(addElementsOperation(store.getPage(firstPageId), [bad]))).toThrow();
   });
 
-  it("limpar página pode ser desfeito", () => {
+  it("clearing a page can be undone", () => {
     const { store, firstPageId, draw } = setup();
     draw();
     draw();
@@ -155,7 +155,7 @@ describe("PaperStore", () => {
     expect(store.getPage(firstPageId).elements).toHaveLength(2);
   });
 
-  it("load substitui o documento, reinicia o histórico e emite reason=load", () => {
+  it("load replaces the document, resets history and emits reason=load", () => {
     const { store, changes, firstPageId, draw } = setup();
     draw();
     const next = createDocument();
@@ -165,9 +165,9 @@ describe("PaperStore", () => {
     expect(changes.at(-1)).toMatchObject({ reason: "load", deletedPageIds: [firstPageId] });
   });
 
-  it("respeita o limite de páginas", () => {
+  it("respects the page limit", () => {
     const { store } = setup({ limits: { maxPages: 2 } });
     store.addPage();
-    expect(() => store.addPage()).toThrow(/Limite/);
+    expect(() => store.addPage()).toThrow(/Limit of/);
   });
 });

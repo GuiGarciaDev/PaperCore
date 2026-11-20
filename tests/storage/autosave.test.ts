@@ -8,7 +8,7 @@ import { MemoryStorageAdapter } from "../../src/storage/memoryAdapter.js";
 import type { DocumentMeta } from "../../src/storage/types.js";
 import { stroke } from "../helpers.js";
 
-/** Adaptador em memória que registra as chamadas e pode falhar ou segurar gravações. */
+/** In-memory adapter that records calls and can fail or hold writes. */
 class SpyAdapter extends MemoryStorageAdapter {
   saves: { pageIds: string[]; meta: DocumentMeta }[] = [];
   deletes: string[][] = [];
@@ -19,7 +19,7 @@ class SpyAdapter extends MemoryStorageAdapter {
     if (this.gate) await this.gate;
     if (this.failNext > 0) {
       this.failNext -= 1;
-      throw new Error("disco cheio");
+      throw new Error("disk full");
     }
     this.saves.push({ pageIds: pages.map((p) => p.id), meta });
     await super.savePages(documentId, pages, meta);
@@ -46,16 +46,16 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 describe("autosave", () => {
-  it("começa idle e não salva nada sem mudanças", async () => {
+  it("starts idle and saves nothing without changes", async () => {
     const { autosave, adapter } = setup();
     expect(autosave.getState().status).toBe("idle");
     await vi.advanceTimersByTimeAsync(5000);
     expect(adapter.saves).toHaveLength(0);
   });
 
-  it("debounce: várias mudanças viram um salvamento só, com as páginas sujas", async () => {
+  it("debounce: several changes become a single save with the dirty pages", async () => {
     const { autosave, adapter, draw, statuses, store } = setup();
-    store.addPage(); // outra página, não tocada depois
+    store.addPage(); // another page, not touched afterwards
     await autosave.flush();
     adapter.saves = [];
     draw();
@@ -71,7 +71,7 @@ describe("autosave", () => {
     expect(statuses.slice(-3)).toEqual(["dirty", "saving", "saved"]);
   });
 
-  it("maxWait: mudanças contínuas não adiam o salvamento para sempre", async () => {
+  it("maxWait: continuous changes do not postpone saving forever", async () => {
     const { adapter, draw } = setup();
     for (let t = 0; t < 1100; t += 50) {
       draw();
@@ -80,14 +80,14 @@ describe("autosave", () => {
     expect(adapter.saves.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("corrida: mudança durante o saving volta para dirty, nunca saved com pendências", async () => {
+  it("race: a change during saving goes back to dirty, never saved with pending changes", async () => {
     const { autosave, adapter, draw, statuses } = setup();
     let release!: () => void;
     adapter.gate = new Promise((r) => (release = r));
     draw();
     await vi.advanceTimersByTimeAsync(100);
     expect(autosave.getState().status).toBe("saving");
-    draw(); // chega enquanto grava
+    draw(); // arrives while writing
     adapter.gate = null;
     release();
     await vi.advanceTimersByTimeAsync(0);
@@ -98,7 +98,7 @@ describe("autosave", () => {
     expect(adapter.saves).toHaveLength(2);
   });
 
-  it("flush grava na hora e o resultado carrega igual ao documento", async () => {
+  it("flush writes immediately and the result loads equal to the document", async () => {
     const { autosave, adapter, draw, store } = setup();
     draw();
     await autosave.flush();
@@ -106,7 +106,7 @@ describe("autosave", () => {
     expect(await adapter.load(store.getDocument().id)).toEqual(store.getDocument());
   });
 
-  it("flush espera um salvamento em andamento", async () => {
+  it("flush waits for a save in progress", async () => {
     const { autosave, adapter, draw } = setup();
     let release!: () => void;
     adapter.gate = new Promise((r) => (release = r));
@@ -122,7 +122,7 @@ describe("autosave", () => {
     expect(flushed).toBe(true);
   });
 
-  it("exclusão de página: grava a meta sem a página e depois remove a página", async () => {
+  it("page deletion: writes the meta without the page, then removes the page", async () => {
     const { autosave, adapter, store } = setup();
     const extra = store.addPage();
     await autosave.flush();
@@ -133,7 +133,7 @@ describe("autosave", () => {
     expect(adapter.storedPageIds(store.getDocument().id)).not.toContain(extra.id);
   });
 
-  it("mudança só de ordem grava a meta", async () => {
+  it("an order-only change writes the meta", async () => {
     const { autosave, adapter, store } = setup();
     const extra = store.addPage();
     await autosave.flush();
@@ -143,7 +143,7 @@ describe("autosave", () => {
     expect(adapter.saves.at(-1)!.meta.pageIds[0]).toBe(extra.id);
   });
 
-  it("load não suja o documento", async () => {
+  it("load does not mark the document dirty", async () => {
     const { autosave, adapter, store } = setup();
     store.load(createDocument());
     expect(autosave.getState().status).toBe("idle");
@@ -151,7 +151,7 @@ describe("autosave", () => {
     expect(adapter.saves).toHaveLength(0);
   });
 
-  it("load com mudanças pendentes grava o documento ANTERIOR antes", async () => {
+  it("load with pending changes writes the PREVIOUS document first", async () => {
     const { autosave, adapter, draw, store } = setup();
     const before = store.getDocument().id;
     draw();
@@ -162,7 +162,7 @@ describe("autosave", () => {
     expect(await adapter.list()).toEqual([before]);
   });
 
-  it("saveAll grava o documento inteiro (primeiro salvamento)", async () => {
+  it("saveAll writes the whole document (first save)", async () => {
     const { autosave, adapter, store } = setup();
     store.addPage();
     store.load(createDocument({}));
@@ -171,22 +171,22 @@ describe("autosave", () => {
     expect(await adapter.load(doc.id)).toEqual(doc);
   });
 
-  it("erro: estado error, flush rejeita, nova tentativa com backoff e nada se perde", async () => {
+  it("error: error state, flush rejects, retry with backoff and nothing is lost", async () => {
     const { autosave, adapter, draw, store } = setup({ retryDelay: 200 });
     adapter.failNext = 2;
     draw();
-    await expect(autosave.flush()).rejects.toThrow("disco cheio");
+    await expect(autosave.flush()).rejects.toThrow("disk full");
     expect(autosave.getState().status).toBe("error");
-    await vi.advanceTimersByTimeAsync(200); // 1ª nova tentativa: falha de novo
+    await vi.advanceTimersByTimeAsync(200); // 1st retry: fails again
     expect(autosave.getState().status).toBe("error");
     await vi.advanceTimersByTimeAsync(399);
     expect(adapter.saves).toHaveLength(0);
-    await vi.advanceTimersByTimeAsync(1); // 2ª nova tentativa (400 ms): sucesso
+    await vi.advanceTimersByTimeAsync(1); // 2nd retry (400 ms): success
     expect(autosave.getState().status).toBe("saved");
     expect(await adapter.load(store.getDocument().id)).toEqual(store.getDocument());
   });
 
-  it("flush em pagehide e quando a aba fica oculta", async () => {
+  it("flushes on pagehide and when the tab becomes hidden", async () => {
     const listeners = new Map<string, () => void>();
     let visibility = "visible";
     const fakeWindow = {
@@ -214,7 +214,7 @@ describe("autosave", () => {
     expect(listeners.size).toBe(0);
   });
 
-  it("destroy para de observar e é idempotente", async () => {
+  it("destroy stops observing and is idempotent", async () => {
     const { autosave, adapter, draw } = setup();
     autosave.destroy();
     autosave.destroy();

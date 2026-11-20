@@ -7,7 +7,7 @@ import { DrawingSurface } from "../../src/react/DrawingSurface.js";
 import { useEngineState } from "../../src/react/hooks.js";
 import { installCanvasStubs } from "../engine/setup.js";
 
-// Diz ao React que este ambiente usa act().
+// Tells React this environment uses act().
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
 let container: HTMLDivElement;
@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 describe("<DrawingSurface>", () => {
-  it("em StrictMode termina com UMA engine viva e um único conjunto de canvases", () => {
+  it("in StrictMode it ends with ONE live engine and a single set of canvases", () => {
     const engines: (PaperCore | null)[] = [];
     act(() =>
       root.render(
@@ -42,12 +42,12 @@ describe("<DrawingSurface>", () => {
     expect(engines.at(-1)).toBe(last);
     expect(container.querySelectorAll("[data-papercore]")).toHaveLength(1);
     expect(container.querySelectorAll("canvas")).toHaveLength(3);
-    // As engines descartadas pelo StrictMode foram destruídas: usá-las lança erro.
+    // Engines discarded by StrictMode were destroyed: using them throws.
     for (const old of live.slice(0, -1)) expect(() => old.addPage()).toThrow();
     expect(() => last.addPage()).not.toThrow();
   });
 
-  it("ao desmontar destrói a engine, remove o DOM e avisa com null", () => {
+  it("on unmount it destroys the engine, removes the DOM and reports null", () => {
     let current: PaperCore | null = null;
     act(() => root.render(<DrawingSurface onEngine={(e) => (current = e)} />));
     const engine = current!;
@@ -57,7 +57,7 @@ describe("<DrawingSurface>", () => {
     expect(() => engine.addPage()).toThrow();
   });
 
-  it("repassa as opções iniciais", () => {
+  it("passes the initial options through", () => {
     let current: PaperCore | null = null;
     act(() =>
       root.render(
@@ -70,7 +70,7 @@ describe("<DrawingSurface>", () => {
 });
 
 describe("useEngineState", () => {
-  it("re-renderiza quando o estado da engine muda", () => {
+  it("re-renders when the engine state changes", () => {
     const seen: (EngineState | null)[] = [];
     let engineRef: PaperCore | null = null;
     function App() {
@@ -99,7 +99,7 @@ describe("useEngineState", () => {
     expect(seen.at(-1)!.tool).toBe("eraser");
   });
 
-  it("devolve null sem engine", () => {
+  it("returns null without an engine", () => {
     let value: EngineState | null | undefined;
     function Probe() {
       value = useEngineState(null);

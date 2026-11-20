@@ -6,7 +6,7 @@ import type { Size, StrokeElement, StrokeStyle } from "../../core/types.js";
 import type { InputSample } from "../input.js";
 import type { Tool, ToolContext } from "./types.js";
 
-/** Distância mínima entre pontos capturados, em pixels de TELA (ADR-0005). */
+/** Minimum distance between captured points, in SCREEN pixels. */
 export const MIN_POINT_DISTANCE_PX = 0.75;
 
 interface Draft {
@@ -15,9 +15,9 @@ interface Draft {
   style: StrokeStyle;
   hasPressure: boolean;
   points: number[];
-  /** Última amostra recebida (mesmo se descartada pelo filtro), para fechar o traço no ponto exato. */
+  /** Last sample received (even if dropped by the filter), to end the stroke at the exact point. */
   pending: InputSample | null;
-  /** `true` quando este rascunho continua um traço que atingiu o limite de pontos. */
+  /** `true` when this draft continues a stroke that reached the point limit. */
   continuation: boolean;
 }
 
@@ -51,7 +51,7 @@ export class PenTool implements Tool {
     if (!this.draft) return;
     const minDistance = MIN_POINT_DISTANCE_PX / this.ctx.getTransform().scale;
     for (const sample of samples) {
-      // Lido a cada iteração: `push` pode trocar o rascunho ao continuar o traço (limite de pontos).
+      // Read on every iteration: `push` may swap the draft when continuing the stroke (point limit).
       const draft = this.draft;
       if (!draft) return;
       const n = draft.points.length;
@@ -70,7 +70,7 @@ export class PenTool implements Tool {
     if (!this.draft) return;
     if (this.draft.pending) this.push(this.draft.pending);
     const draft = this.draft;
-    // Uma continuação que só tem o ponto de junção não acrescenta tinta.
+    // A continuation holding only the joining point adds no ink.
     if (!(draft.continuation && draft.points.length === POINT_STRIDE)) this.commit(draft);
     this.draft = null;
     this.ctx.setLiveStroke(null);
@@ -85,14 +85,14 @@ export class PenTool implements Tool {
     const draft = this.draft;
     if (!draft) return;
     draft.pending = null;
-    // Pontos fora da página são recortados na borda (o validador exige pontos dentro da página).
+    // Points outside the page are clamped to the edge (the validator requires points inside the page).
     const x = quantize(Math.min(draft.pageSize.width, Math.max(0, sample.x)));
     const y = quantize(Math.min(draft.pageSize.height, Math.max(0, sample.y)));
     const p = quantize(sample.pressure);
     draft.points.push(x, y, p);
 
-    // Limite de pontos: em vez de descartar tinta, confirma este traço e continua em um novo
-    // a partir do último ponto.
+    // Point limit: instead of dropping ink, commit this stroke and continue in a new one
+    // from the last point.
     if (draft.points.length / POINT_STRIDE >= this.ctx.limits.maxPointsPerStroke) {
       this.commit(draft);
       this.draft = { ...draft, points: [x, y, p], pending: null, continuation: true };

@@ -2,7 +2,7 @@ import { PaperCoreError } from "./errors.js";
 import type { PaperElement, PaperPage } from "./types.js";
 
 export interface IndexedElement {
-  /** Em `removed`: índice no estado ANTERIOR. Em `added`: índice no estado POSTERIOR. */
+  /** In `removed`: index in the PREVIOUS state. In `added`: index in the NEXT state. */
   readonly index: number;
   readonly element: PaperElement;
 }
@@ -19,7 +19,7 @@ export interface RemoveElementsOperation {
   readonly removed: readonly IndexedElement[];
 }
 
-/** Remove e adiciona de forma atômica (ex.: a borracha corta um traço em pedaços). */
+/** Removes and adds atomically (e.g. the eraser cuts a stroke into pieces). */
 export interface ReplaceElementsOperation {
   readonly type: "REPLACE_ELEMENTS";
   readonly pageId: string;
@@ -39,12 +39,12 @@ function addedOf(op: ElementOperation): readonly IndexedElement[] {
   return op.type === "REMOVE_ELEMENTS" ? NONE : op.added;
 }
 
-/** Elementos que a operação adiciona (útil para validar antes de aplicar). */
+/** Elements the operation adds (useful to validate before applying). */
 export function addedElements(op: ElementOperation): readonly IndexedElement[] {
   return addedOf(op);
 }
 
-/** Operação inversa: trocar `removed` por `added`. */
+/** Inverse operation: swap `removed` and `added`. */
 export function invertOperation(op: ElementOperation): ElementOperation {
   switch (op.type) {
     case "ADD_ELEMENTS":
@@ -57,9 +57,9 @@ export function invertOperation(op: ElementOperation): ElementOperation {
 }
 
 /**
- * Aplica a operação a uma lista de elementos e devolve uma NOVA lista.
- * Remove em ordem decrescente de índice e insere em ordem crescente.
- * Lança `INCONSISTENT_OPERATION` se um elemento a remover não existir.
+ * Applies the operation to a list of elements and returns a NEW list.
+ * Removes in descending index order and inserts in ascending order.
+ * Throws `INCONSISTENT_OPERATION` if an element to remove does not exist.
  */
 export function applyToElements(elements: readonly PaperElement[], op: ElementOperation): PaperElement[] {
   const result = elements.slice();
@@ -71,7 +71,7 @@ export function applyToElements(elements: readonly PaperElement[], op: ElementOp
       index = result.findIndex((element) => element.id === item.element.id);
     }
     if (index < 0) {
-      throw new PaperCoreError("INCONSISTENT_OPERATION", `Elemento ${item.element.id} não está na página.`);
+      throw new PaperCoreError("INCONSISTENT_OPERATION", `Element ${item.element.id} is not on the page.`);
     }
     result.splice(index, 1);
   }
@@ -80,7 +80,10 @@ export function applyToElements(elements: readonly PaperElement[], op: ElementOp
   const existingIds = new Set(result.map((element) => element.id));
   for (const item of added) {
     if (existingIds.has(item.element.id)) {
-      throw new PaperCoreError("INCONSISTENT_OPERATION", `Elemento ${item.element.id} já existe na página.`);
+      throw new PaperCoreError(
+        "INCONSISTENT_OPERATION",
+        `Element ${item.element.id} already exists on the page.`,
+      );
     }
     existingIds.add(item.element.id);
     result.splice(Math.min(Math.max(item.index, 0), result.length), 0, item.element);
@@ -88,7 +91,7 @@ export function applyToElements(elements: readonly PaperElement[], op: ElementOp
   return result;
 }
 
-/** Cria uma operação que adiciona elementos no topo da página. */
+/** Creates an operation that adds elements on top of the page. */
 export function addElementsOperation(
   page: PaperPage,
   elements: readonly PaperElement[],
@@ -100,7 +103,7 @@ export function addElementsOperation(
   };
 }
 
-/** Cria uma operação que remove os elementos com os ids informados (ignorando ids inexistentes). */
+/** Creates an operation that removes the elements with the given ids (ignoring unknown ids). */
 export function removeElementsOperation(page: PaperPage, ids: Iterable<string>): RemoveElementsOperation {
   const wanted = new Set(ids);
   const removed: IndexedElement[] = [];

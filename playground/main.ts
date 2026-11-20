@@ -9,12 +9,12 @@ import { createAutosave, IndexedDbStorageAdapter, type AutosaveState } from "pap
 
 const $ = <T extends HTMLElement>(selector: string) => {
   const el = document.querySelector<T>(selector);
-  if (!el) throw new Error(`Elemento não encontrado: ${selector}`);
+  if (!el) throw new Error(`Element not found: ${selector}`);
   return el;
 };
 
-// ── Persistência local (IndexedDB) ─────────────────────────────────────────
-// O playground guarda um único documento: o último salvo é reaberto ao recarregar a página.
+// ── Local persistence (IndexedDB) ──────────────────────────────────────────
+// The playground keeps a single document: the last saved one is reopened on reload.
 const storage = new IndexedDbStorageAdapter({ databaseName: "papercore-playground" });
 let startupError: unknown = null;
 async function loadLastDocument() {
@@ -34,17 +34,17 @@ const engine = createPaperCore($("#surface"), {
 });
 const autosave = createAutosave(engine, storage);
 
-/** Grava o documento atual inteiro e remove os anteriores (o playground mantém só um). */
+/** Writes the whole current document and removes older ones (the playground keeps only one). */
 async function persistCurrentDocument() {
   await autosave.saveAll();
   const currentId = engine.getDocument().id;
   for (const id of await storage.list()) if (id !== currentId) await storage.deleteDocument(id);
 }
 
-// Exposto só no playground, para depurar pelo console do navegador.
+// Exposed only in the playground, to debug from the browser console.
 (window as unknown as { paper: typeof engine }).paper = engine;
 
-// ── Toast de erro ──────────────────────────────────────────────────────────
+// ── Error toast ────────────────────────────────────────────────────────────
 const toast = $<HTMLDivElement>("#toast");
 let toastTimer: number | undefined;
 function showError(error: unknown) {
@@ -59,7 +59,7 @@ function showError(error: unknown) {
   window.clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => (toast.hidden = true), 5000);
 }
-// ── Confirmação (substitui o confirm() nativo, que pode estar bloqueado) ───
+// ── Confirmation (replaces the native confirm(), which may be blocked) ─────
 const confirmDialog = $<HTMLDialogElement>("#confirm-dialog");
 function askConfirm(message: string, confirmLabel: string): Promise<boolean> {
   $("#confirm-message").textContent = message;
@@ -67,7 +67,7 @@ function askConfirm(message: string, confirmLabel: string): Promise<boolean> {
   confirmDialog.returnValue = "";
   confirmDialog.showModal();
   return new Promise((resolve) => {
-    // "close" dispara ao clicar em um botão e também com Esc (returnValue vazio = cancelado).
+    // "close" fires when a button is clicked and also on Esc (empty returnValue = cancelled).
     confirmDialog.addEventListener("close", () => resolve(confirmDialog.returnValue === "ok"), {
       once: true,
     });
@@ -83,7 +83,7 @@ const guard = (fn: () => void) => () => {
 };
 engine.on("error", showError);
 
-// ── Ferramentas ────────────────────────────────────────────────────────────
+// ── Tools ──────────────────────────────────────────────────────────────────
 document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((button) => {
   button.addEventListener(
     "click",
@@ -116,12 +116,12 @@ $("#redo").addEventListener(
   guard(() => engine.redo()),
 );
 $("#clear").addEventListener("click", async () => {
-  if (await askConfirm("Limpar todos os traços desta página? Você pode desfazer depois.", "Limpar")) {
+  if (await askConfirm("Clear every stroke on this page? You can undo it afterwards.", "Clear")) {
     guard(() => engine.clearPage())();
   }
 });
 
-// ── Páginas e fundo ────────────────────────────────────────────────────────
+// ── Pages and background ───────────────────────────────────────────────────
 const pageIds = () => engine.getDocument().pages.map((p) => p.id);
 $("#prev").addEventListener(
   "click",
@@ -147,7 +147,7 @@ $("#duplicate-page").addEventListener(
   guard(() => engine.duplicatePage()),
 );
 $("#delete-page").addEventListener("click", async () => {
-  if (await askConfirm("Excluir esta página? Essa ação não pode ser desfeita.", "Excluir")) {
+  if (await askConfirm("Delete this page? This cannot be undone.", "Delete")) {
     guard(() => engine.deletePage())();
   }
 });
@@ -157,7 +157,7 @@ backgroundSelect.addEventListener(
   guard(() => engine.setPageBackground(createBackground(backgroundSelect.value as BackgroundType))),
 );
 
-// ── Zoom e leitura ─────────────────────────────────────────────────────────
+// ── Zoom and read-only ─────────────────────────────────────────────────────
 $("#zoom-in").addEventListener(
   "click",
   guard(() => engine.zoomIn()),
@@ -176,7 +176,7 @@ readOnly.addEventListener(
   guard(() => engine.setReadOnly(readOnly.checked)),
 );
 
-// ── Importar / exportar ────────────────────────────────────────────────────
+// ── Import / export ──────────────────────────────────────────────────────────
 $("#export").addEventListener(
   "click",
   guard(() => {
@@ -204,7 +204,7 @@ fileInput.addEventListener("change", async () => {
   }
 });
 
-// ── Reflexo do estado na interface ─────────────────────────────────────────
+// ── Reflect the state in the UI ────────────────────────────────────────────
 function render() {
   const state = engine.getState();
   const doc = engine.getDocument();
@@ -235,13 +235,13 @@ function render() {
   $("#zoom-reset").textContent = `${Math.round(state.zoom * 100)}%`;
 }
 
-/** Só quando o documento muda (serializar a cada zoom seria desperdício). */
+/** Only when the document changes (serializing on every zoom would be wasteful). */
 function renderStats() {
   const page = engine.getDocument().pages[engine.getState().activePageIndex]!;
   const points = page.elements.reduce((sum, e) => sum + e.points.length / 3, 0);
   const kb = (engine.exportJSON().length / 1024).toFixed(1);
   $("#stats").textContent =
-    `Traços na página: ${page.elements.length} · pontos: ${points} · documento: ${kb} KB`;
+    `Strokes on page: ${page.elements.length} · points: ${points} · document: ${kb} KB`;
 }
 
 engine.on("state", () => {
@@ -252,9 +252,9 @@ engine.on("change", (change) => {
   render();
   renderStats();
   $("#change-info").textContent =
-    `Última alteração: ${change.reason}` +
-    (change.changedPageIds.length ? ` · páginas alteradas: ${change.changedPageIds.length}` : "") +
-    (change.deletedPageIds.length ? ` · excluídas: ${change.deletedPageIds.length}` : "");
+    `Last change: ${change.reason}` +
+    (change.changedPageIds.length ? ` · pages changed: ${change.changedPageIds.length}` : "") +
+    (change.deletedPageIds.length ? ` · deleted: ${change.deletedPageIds.length}` : "");
 });
 
 let lastInputUpdate = 0;
@@ -262,27 +262,25 @@ engine.on("input", (sample) => {
   const now = performance.now();
   if (now - lastInputUpdate < 100) return;
   lastInputUpdate = now;
-  const pressure = sample.hasPressure ? sample.pressure.toFixed(2) : "não informada";
+  const pressure = sample.hasPressure ? sample.pressure.toFixed(2) : "not reported";
   $("#input-info").textContent =
-    `Ponteiro: ${sample.kind} · pressão: ${pressure}` +
-    (engine.getState().penDetected ? " · caneta detectada (palma ignorada)" : "");
+    `Pointer: ${sample.kind} · pressure: ${pressure}` +
+    (engine.getState().penDetected ? " · pen detected (palm ignored)" : "");
 });
 
-// ── Indicador de salvamento ────────────────────────────────────────────────
+// ── Save indicator ─────────────────────────────────────────────────────────
 const SAVE_LABELS: Record<AutosaveState["status"], string> = {
-  idle: "Salvo localmente",
-  dirty: "Alterações pendentes",
-  saving: "Salvando…",
-  saved: "Salvo localmente",
-  error: "Erro ao salvar — tentando de novo",
+  idle: "Saved locally",
+  dirty: "Unsaved changes",
+  saving: "Saving…",
+  saved: "Saved locally",
+  error: "Save failed — retrying",
 };
 function renderSave(state: AutosaveState) {
   const info = $("#save-info");
   info.dataset.state = state.status === "idle" ? "saved" : state.status;
   info.textContent = SAVE_LABELS[state.status];
-  info.title = state.lastSavedAt
-    ? `Último salvamento: ${new Date(state.lastSavedAt).toLocaleTimeString()}`
-    : "";
+  info.title = state.lastSavedAt ? `Last saved: ${new Date(state.lastSavedAt).toLocaleTimeString()}` : "";
 }
 autosave.on("state", (state) => {
   renderSave(state);
@@ -294,5 +292,5 @@ renderStats();
 renderSave(autosave.getState());
 
 if (startupError) showError(startupError);
-// Documento novo (primeira visita ou armazenamento ilegível): primeiro salvamento completo.
+// New document (first visit or unreadable storage): full first save.
 if (!savedDocument) persistCurrentDocument().catch(showError);

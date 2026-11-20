@@ -15,8 +15,8 @@ function setup() {
   return { ...tool, pen, eraser, drawLine };
 }
 
-describe("ferramenta borracha", () => {
-  it("um gesto que corta dois traços vira UM passo de undo", () => {
+describe("eraser tool", () => {
+  it("a gesture that cuts two strokes becomes ONE undo step", () => {
     const { eraser, drawLine, strokes, store, pageId } = setup();
     drawLine(100);
     drawLine(140);
@@ -26,14 +26,14 @@ describe("ferramenta borracha", () => {
     for (let y = 82; y <= 160; y += 2) eraser.move([sample(100, y)]);
     eraser.end();
 
-    expect(strokes()).toHaveLength(4); // cada linha virou dois pedaços
+    expect(strokes()).toHaveLength(4); // each line became two pieces
     expect(store.undo(pageId)).toBe(true);
     expect(strokes()).toEqual(before);
     expect(store.redo(pageId)).toBe(true);
     expect(strokes()).toHaveLength(4);
   });
 
-  it("mostra a pré-visualização sem tocar no store até soltar", () => {
+  it("shows the preview without touching the store until release", () => {
     const { eraser, drawLine, strokes, previews, cursors } = setup();
     drawLine(100);
     const before = strokes();
@@ -48,7 +48,7 @@ describe("ferramenta borracha", () => {
     expect(strokes()).toHaveLength(2);
   });
 
-  it("cancelar descarta o efeito", () => {
+  it("cancelling discards the effect", () => {
     const { eraser, drawLine, strokes, store, pageId } = setup();
     drawLine(100);
     const before = strokes();
@@ -57,10 +57,10 @@ describe("ferramenta borracha", () => {
     eraser.cancel();
     expect(strokes()).toBe(before);
     store.undo(pageId);
-    expect(strokes()).toHaveLength(0); // o único passo de undo é o do traço
+    expect(strokes()).toHaveLength(0); // the only undo step is the stroke's
   });
 
-  it("gesto sem contato não cria passo de undo", () => {
+  it("a gesture without contact creates no undo step", () => {
     const { eraser, drawLine, store, pageId } = setup();
     drawLine(100);
     eraser.begin(sample(500, 500));
@@ -70,7 +70,7 @@ describe("ferramenta borracha", () => {
     expect(store.canUndo(pageId)).toBe(false);
   });
 
-  it("raio da borracha é em pixels de tela: com zoom, cobre menos área lógica", () => {
+  it("the eraser radius is in screen pixels: zoomed in, it covers less logical area", () => {
     const tool = setupTool();
     const zoomed = { ...tool.ctx, getTransform: () => ({ scale: 4, offsetX: 0, offsetY: 0 }) };
     const eraser = new EraserTool(zoomed);

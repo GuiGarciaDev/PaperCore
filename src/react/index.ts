@@ -1,5 +1,5 @@
-// API pública de `papercore/react`. React é peerDependency opcional: só quem importa este
-// subpath precisa dele.
+// Public API of `papercore/react`. React is an optional peerDependency: only consumers of this
+// subpath need it.
 
 export { DrawingSurface, type DrawingSurfaceProps } from "./DrawingSurface.js";
 export { useDrawingEngine, useEngineState } from "./hooks.js";

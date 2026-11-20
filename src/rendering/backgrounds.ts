@@ -2,9 +2,9 @@ import type { Rect } from "../core/geometry/bounds.js";
 import type { PageBackground, Size } from "../core/types.js";
 
 export interface BackgroundLines {
-  /** Posições Y (lógicas) das linhas horizontais visíveis. */
+  /** Y positions (logical) of the visible horizontal lines. */
   readonly horizontal: readonly number[];
-  /** Posições X (lógicas) das linhas verticais visíveis. */
+  /** X positions (logical) of the visible vertical lines. */
   readonly vertical: readonly number[];
 }
 
@@ -16,8 +16,8 @@ function linesIn(spacing: number, length: number, from: number, to: number): num
 }
 
 /**
- * Calcula SOMENTE as linhas visíveis do fundo (função pura, testável sem canvas).
- * O fundo é configuração, nunca imagem nem elemento do documento.
+ * Computes ONLY the visible background lines (a pure function, testable without a canvas).
+ * The background is configuration, never an image nor a document element.
  */
 export function backgroundLines(background: PageBackground, page: Size, visible: Rect): BackgroundLines {
   switch (background.type) {

@@ -1,4 +1,4 @@
-// API pública de `papercore/storage` (ADR-0008). Depende só do core: quem não persiste não paga.
+// Public API of `papercore/storage`. Depends only on the core: no persistence, no cost.
 
 export type { DocumentMeta, StorageAdapter } from "./types.js";
 export { assembleDocument, documentMeta } from "./documentParts.js";

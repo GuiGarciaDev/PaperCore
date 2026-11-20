@@ -11,8 +11,8 @@ import { docWithStrokes, stroke } from "../helpers.js";
 
 const ids = (elements: readonly PaperElement[]) => elements.map((e) => e.id);
 
-describe("operações", () => {
-  it("ADD insere no topo e sua inversa remove", () => {
+describe("operations", () => {
+  it("ADD inserts on top and its inverse removes", () => {
     const page = docWithStrokes(2).pages[0]!;
     const s = stroke();
     const op = addElementsOperation(page, [s]);
@@ -21,7 +21,7 @@ describe("operações", () => {
     expect(applyToElements(after, invertOperation(op))).toEqual(page.elements);
   });
 
-  it("REMOVE preserva o índice: o undo restaura na mesma camada", () => {
+  it("REMOVE keeps the index: undo restores in the same layer", () => {
     const page = docWithStrokes(5).pages[0]!;
     const target = [page.elements[1]!.id, page.elements[3]!.id];
     const op = removeElementsOperation(page, target);
@@ -30,7 +30,7 @@ describe("operações", () => {
     expect(applyToElements(after, invertOperation(op))).toEqual(page.elements);
   });
 
-  it("REPLACE (como a borracha) é atômico e reversível", () => {
+  it("REPLACE (like the eraser) is atomic and reversible", () => {
     const page = docWithStrokes(3).pages[0]!;
     const original = page.elements[1]!;
     const pieceA = stroke();
@@ -49,26 +49,26 @@ describe("operações", () => {
     expect(applyToElements(after, invertOperation(op))).toEqual(page.elements);
   });
 
-  it("não modifica o array original", () => {
+  it("does not modify the original array", () => {
     const page = docWithStrokes(2).pages[0]!;
     const before = page.elements.slice();
     applyToElements(page.elements, removeElementsOperation(page, [page.elements[0]!.id]));
     expect(page.elements).toEqual(before);
   });
 
-  it("acusa inconsistência ao remover elemento inexistente", () => {
+  it("reports an inconsistency when removing a missing element", () => {
     const page = docWithStrokes(1).pages[0]!;
     const op: ElementOperation = {
       type: "REMOVE_ELEMENTS",
       pageId: page.id,
       removed: [{ index: 0, element: stroke() }],
     };
-    expect(() => applyToElements(page.elements, op)).toThrow(/não está na página/);
+    expect(() => applyToElements(page.elements, op)).toThrow(/is not on the page/);
   });
 
-  it("acusa inconsistência ao adicionar id duplicado", () => {
+  it("reports an inconsistency when adding a duplicate id", () => {
     const page = docWithStrokes(1).pages[0]!;
     const op = addElementsOperation(page, [page.elements[0]!]);
-    expect(() => applyToElements(page.elements, op)).toThrow(/já existe/);
+    expect(() => applyToElements(page.elements, op)).toThrow(/already exists/);
   });
 });

@@ -2,14 +2,14 @@ import basicSsl from "@vitejs/plugin-basic-ssl";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vite";
 
-// O playground importa o código-fonte direto (sem build), então mudanças no motor aparecem na hora.
-// `npm run dev:lan` usa HTTPS para testar no tablet pela rede local (contexto seguro).
+// The playground imports the source directly (no build), so engine changes show up instantly.
+// `npm run dev:lan` uses HTTPS to test on a tablet over the local network (secure context).
 export default defineConfig(({ mode }) => ({
   root: fileURLToPath(new URL(".", import.meta.url)),
   base: "./",
   resolve: {
     alias: [
-      // A ordem importa: o subpath antes do pacote raiz.
+      // Order matters: the subpath before the root package.
       {
         find: /^papercore\/storage$/,
         replacement: fileURLToPath(new URL("../src/storage/index.ts", import.meta.url)),

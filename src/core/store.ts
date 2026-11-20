@@ -16,10 +16,10 @@ import { validateBackground, validateElement } from "./validation.js";
 
 export type ChangeReason = "user" | "undo" | "redo" | "load";
 
-/** Tudo o que um adaptador de persistência precisa para salvar por página. */
+/** Everything a persistence adapter needs to save per page. */
 export interface DocumentChange {
   readonly reason: ChangeReason;
-  /** Páginas cujo conteúdo ou fundo mudou (inclui as recém-criadas). */
+  /** Pages whose content or background changed (includes newly created ones). */
   readonly changedPageIds: readonly string[];
   readonly addedPageIds: readonly string[];
   readonly deletedPageIds: readonly string[];
@@ -36,8 +36,8 @@ export interface StoreOptions {
 }
 
 /**
- * Dono do documento. Atualizações imutáveis por página: cada mudança gera novos objetos de
- * página/documento e compartilha os elementos, então snapshots são baratos e seguros.
+ * Owner of the document. Immutable per-page updates: each change creates new page/document
+ * objects and shares the elements, so snapshots are cheap and safe.
  */
 export class PaperStore {
   readonly limits: PaperLimits;
@@ -63,7 +63,7 @@ export class PaperStore {
 
   getPage(pageId: string): PaperPage {
     const page = this.doc.pages.find((p) => p.id === pageId);
-    if (!page) throw new PaperCoreError("PAGE_NOT_FOUND", `Página ${pageId} não existe.`);
+    if (!page) throw new PaperCoreError("PAGE_NOT_FOUND", `Page ${pageId} does not exist.`);
     return page;
   }
 
@@ -87,16 +87,16 @@ export class PaperStore {
     return !this.readOnly && this.history.canRedo(pageId);
   }
 
-  /** Aplica uma operação do usuário e a registra no histórico da página. */
+  /** Applies a user operation and records it in the page's history. */
   apply(op: ElementOperation): void {
     this.assertWritable();
     if (isEmptyOperation(op)) return;
     const page = this.getPage(op.pageId);
     for (const { element } of addedElements(op)) {
       const result = validateElement(element, page.size, this.limits);
-      if (!result.ok) throw new PaperCoreError("INVALID_ARGUMENT", "Elemento inválido.", result.errors);
+      if (!result.ok) throw new PaperCoreError("INVALID_ARGUMENT", "Invalid element.", result.errors);
     }
-    // O histórico é gravado ANTES do evento: quem ouve "change" já vê canUndo atualizado.
+    // History is recorded BEFORE the event: "change" listeners already see an up-to-date canUndo.
     this.commit(op, "user", () => this.history.record(op));
   }
 
@@ -126,7 +126,7 @@ export class PaperStore {
     return true;
   }
 
-  /** Remove todos os elementos da página. Entra no histórico (pode ser desfeito). */
+  /** Removes every element from the page. Goes into history (can be undone). */
   clearPage(pageId: string): void {
     const page = this.getPage(pageId);
     this.apply(
@@ -137,11 +137,11 @@ export class PaperStore {
     );
   }
 
-  /** Cria uma página. Operação estrutural: não entra no histórico (ADR-0004). */
+  /** Creates a page. Structural operation: not recorded in history. */
   addPage(options: CreatePageOptions & { index?: number } = {}): PaperPage {
     this.assertWritable();
     if (this.doc.pages.length >= this.limits.maxPages) {
-      throw new PaperCoreError("LIMIT_EXCEEDED", `Limite de ${this.limits.maxPages} páginas atingido.`);
+      throw new PaperCoreError("LIMIT_EXCEEDED", `Limit of ${this.limits.maxPages} pages reached.`);
     }
     const page = createPage({
       size: options.size ?? this.doc.defaultPageSize,
@@ -156,11 +156,11 @@ export class PaperStore {
     return page;
   }
 
-  /** Duplica a página (com novos ids) logo depois da original. */
+  /** Duplicates the page (with new ids) right after the original. */
   duplicatePage(pageId: string): PaperPage {
     this.assertWritable();
     if (this.doc.pages.length >= this.limits.maxPages) {
-      throw new PaperCoreError("LIMIT_EXCEEDED", `Limite de ${this.limits.maxPages} páginas atingido.`);
+      throw new PaperCoreError("LIMIT_EXCEEDED", `Limit of ${this.limits.maxPages} pages reached.`);
     }
     const source = this.getPage(pageId);
     const copy: PaperPage = {
@@ -174,19 +174,19 @@ export class PaperStore {
     return copy;
   }
 
-  /** Exclui a página e o histórico dela. Nunca deixa o documento sem páginas. */
+  /** Deletes the page and its history. Never leaves the document without pages. */
   deletePage(pageId: string): void {
     this.assertWritable();
     this.getPage(pageId);
     if (this.doc.pages.length <= 1) {
-      throw new PaperCoreError("LAST_PAGE", "O documento precisa ter pelo menos uma página.");
+      throw new PaperCoreError("LAST_PAGE", "The document must have at least one page.");
     }
     this.doc = { ...this.doc, pages: this.doc.pages.filter((p) => p.id !== pageId) };
     this.history.clearPage(pageId);
     this.emit({ reason: "user", deletedPageIds: [pageId], orderChanged: true });
   }
 
-  /** Move a página para outra posição. */
+  /** Moves the page to another position. */
   movePage(pageId: string, toIndex: number): void {
     this.assertWritable();
     const page = this.getPage(pageId);
@@ -196,7 +196,7 @@ export class PaperStore {
     this.emit({ reason: "user", orderChanged: true });
   }
 
-  /** Troca o fundo sem tocar nos elementos. */
+  /** Changes the background without touching the elements. */
   setPageBackground(pageId: string, background: PageBackground): void {
     this.assertWritable();
     const page = this.getPage(pageId);
@@ -205,7 +205,7 @@ export class PaperStore {
     this.emit({ reason: "user", changedPageIds: [pageId] });
   }
 
-  /** Substitui o documento inteiro (por exemplo, a versão vinda do servidor). Reinicia o histórico. */
+  /** Replaces the whole document (for example, a version loaded from storage). Resets history. */
   load(document: PaperDocument): void {
     const previousIds = this.doc.pages.map((p) => p.id);
     this.doc = ensureValidDocument(document, this.limits);
@@ -225,14 +225,14 @@ export class PaperStore {
     this.history.clear();
   }
 
-  /** Aplica a operação; `beforeEmit` roda depois da validação e antes do evento "change". */
+  /** Applies the operation; `beforeEmit` runs after validation and before the "change" event. */
   private commit(op: ElementOperation, reason: ChangeReason, beforeEmit?: () => void): void {
     const page = this.getPage(op.pageId);
     const elements = applyToElements(page.elements, op);
     if (elements.length > this.limits.maxElementsPerPage) {
       throw new PaperCoreError(
         "LIMIT_EXCEEDED",
-        `Limite de ${this.limits.maxElementsPerPage} elementos por página atingido.`,
+        `Limit of ${this.limits.maxElementsPerPage} elements per page reached.`,
       );
     }
     this.replacePage({ ...page, elements });
@@ -246,12 +246,12 @@ export class PaperStore {
 
   private assertBackground(background: PageBackground): PageBackground {
     const result = validateBackground(background, this.limits);
-    if (!result.ok) throw new PaperCoreError("INVALID_ARGUMENT", "Fundo inválido.", result.errors);
+    if (!result.ok) throw new PaperCoreError("INVALID_ARGUMENT", "Invalid background.", result.errors);
     return result.value;
   }
 
   private assertWritable(): void {
-    if (this.readOnly) throw new PaperCoreError("READ_ONLY", "O documento está em modo somente leitura.");
+    if (this.readOnly) throw new PaperCoreError("READ_ONLY", "The document is in read-only mode.");
   }
 
   private emit(change: Partial<DocumentChange> & { reason: ChangeReason }): void {

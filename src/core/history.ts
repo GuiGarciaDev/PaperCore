@@ -6,8 +6,8 @@ interface PageStacks {
 }
 
 /**
- * Histórico de operações com UMA pilha por página (ADR-0004).
- * Guarda as operações já aplicadas. `undo` devolve a inversa a ser aplicada.
+ * Operation history with ONE stack per page.
+ * Keeps the operations already applied. `undo` returns the inverse to apply.
  */
 export class HistoryManager {
   private readonly stacks = new Map<string, PageStacks>();
@@ -23,7 +23,7 @@ export class HistoryManager {
     return stacks;
   }
 
-  /** Registra uma operação recém-aplicada pelo usuário. Limpa o redo da página. */
+  /** Records an operation just applied by the user. Clears the page's redo stack. */
   record(op: ElementOperation): void {
     const stacks = this.stacksFor(op.pageId);
     stacks.undo.push(op);
@@ -41,7 +41,7 @@ export class HistoryManager {
     return (this.stacks.get(pageId)?.redo.length ?? 0) > 0;
   }
 
-  /** Retira a última operação e devolve a inversa, que deve ser aplicada ao documento. */
+  /** Pops the last operation and returns its inverse, which must be applied to the document. */
   undo(pageId: string): ElementOperation | undefined {
     const stacks = this.stacks.get(pageId);
     const op = stacks?.undo.pop();
@@ -50,7 +50,7 @@ export class HistoryManager {
     return invertOperation(op);
   }
 
-  /** Retira a última operação desfeita e a devolve para ser aplicada novamente. */
+  /** Pops the last undone operation and returns it to be applied again. */
   redo(pageId: string): ElementOperation | undefined {
     const stacks = this.stacks.get(pageId);
     const op = stacks?.redo.pop();
@@ -59,7 +59,7 @@ export class HistoryManager {
     return op;
   }
 
-  /** Desfaz o efeito de um `undo`/`redo` que falhou ao ser aplicado. */
+  /** Reverts the effect of an `undo`/`redo` that failed to apply. */
   revert(pageId: string, direction: "undo" | "redo"): void {
     const stacks = this.stacks.get(pageId);
     if (!stacks) return;

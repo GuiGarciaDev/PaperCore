@@ -4,14 +4,14 @@ import { migrateDocument, type MigrateOptions } from "./migrations.js";
 import type { PaperDocument } from "./types.js";
 import { validateDocument } from "./validation.js";
 
-/** Serializa o documento como JSON. O documento já está quantizado, então o round-trip é exato. */
+/** Serializes the document as JSON. The document is already quantized, so the round-trip is exact. */
 export function serializeDocument(doc: PaperDocument): string {
   return JSON.stringify(doc);
 }
 
 /**
- * Converte JSON (por exemplo, um arquivo importado) em documento confiável:
- * limite de tamanho → JSON.parse → migração → validação estrita.
+ * Turns JSON (for example, an imported file) into a trusted document:
+ * size limit → JSON.parse → migration → strict validation.
  */
 export function parseDocument(
   json: string,
@@ -21,23 +21,23 @@ export function parseDocument(
   if (json.length > limits.maxImportSize) {
     throw new PaperCoreError(
       "IMPORT_TOO_LARGE",
-      `O arquivo tem ${json.length} caracteres, acima do limite de ${limits.maxImportSize}.`,
+      `The file has ${json.length} characters, above the limit of ${limits.maxImportSize}.`,
     );
   }
   let raw: unknown;
   try {
     raw = JSON.parse(json);
   } catch {
-    throw new PaperCoreError("INVALID_JSON", "O conteúdo não é um JSON válido.");
+    throw new PaperCoreError("INVALID_JSON", "The content is not valid JSON.");
   }
   return ensureValidDocument(migrateDocument(raw, migrateOptions), limits);
 }
 
-/** Valida (e normaliza) um documento já em memória, lançando `INVALID_DOCUMENT` se houver problemas. */
+/** Validates (and normalizes) a document already in memory, throwing `INVALID_DOCUMENT` on problems. */
 export function ensureValidDocument(input: unknown, limits: PaperLimits = DEFAULT_LIMITS): PaperDocument {
   const result = validateDocument(input, limits);
   if (!result.ok) {
-    throw new PaperCoreError("INVALID_DOCUMENT", "Documento inválido.", result.errors);
+    throw new PaperCoreError("INVALID_DOCUMENT", "Invalid document.", result.errors);
   }
   return result.value;
 }

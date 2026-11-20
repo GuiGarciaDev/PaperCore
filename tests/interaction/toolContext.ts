@@ -10,7 +10,7 @@ export function sample(x: number, y: number, kind: PointerKind = "mouse", pressu
   return { screenX: x, screenY: y, x, y, ...normalizePressure(kind, pressure), kind, time: 0 };
 }
 
-/** Contexto de ferramenta sem DOM: escala 1, caneta vermelha 4, borracha de 20 px. */
+/** DOM-free tool context: scale 1, red pen of width 4, 20 px eraser. */
 export function setupTool(options: { limits?: PartialLimits; document?: PaperDocument } = {}) {
   const store = new PaperStore(options.document ?? createDocument(), { limits: options.limits });
   const pageId = store.getDocument().pages[0]!.id;

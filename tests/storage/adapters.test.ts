@@ -19,17 +19,17 @@ async function saveWhole(adapter: StorageAdapter, doc: PaperDocument) {
 }
 
 const adapters: [string, () => StorageAdapter][] = [
-  ["memória", () => new MemoryStorageAdapter()],
-  // Cada teste usa uma fábrica nova: bancos isolados.
+  ["memory", () => new MemoryStorageAdapter()],
+  // Every test uses a fresh factory: isolated databases.
   ["IndexedDB", () => new IndexedDbStorageAdapter({ indexedDB: new IDBFactory() })],
 ];
 
-describe.each(adapters)("adaptador de %s", (_name, make) => {
-  it("load devolve null para documento inexistente", async () => {
+describe.each(adapters)("%s adapter", (_name, make) => {
+  it("load returns null for an unknown document", async () => {
     expect(await make().load("nope")).toBeNull();
   });
 
-  it("round-trip exato do documento inteiro", async () => {
+  it("exact round-trip of the whole document", async () => {
     const adapter = make();
     const doc = sampleDoc();
     await saveWhole(adapter, doc);
@@ -37,7 +37,7 @@ describe.each(adapters)("adaptador de %s", (_name, make) => {
     expect(await adapter.list()).toEqual([doc.id]);
   });
 
-  it("salva só as páginas sujas e respeita a ordem da meta", async () => {
+  it("saves only dirty pages and respects the meta order", async () => {
     const adapter = make();
     const doc = sampleDoc();
     await saveWhole(adapter, doc);
@@ -48,19 +48,19 @@ describe.each(adapters)("adaptador de %s", (_name, make) => {
     expect(await adapter.load(doc.id)).toEqual(next);
   });
 
-  it("ignora páginas órfãs (gravadas mas fora da meta)", async () => {
+  it("ignores orphan pages (stored but not in the meta)", async () => {
     const adapter = make();
     const doc = sampleDoc();
     await saveWhole(adapter, doc);
     const withoutLast = { ...doc, pages: doc.pages.slice(0, 2) };
-    // Meta gravada, mas o app "fechou" antes do deletePages.
+    // Meta written, but the app "closed" before deletePages.
     await adapter.savePages(doc.id, [], documentMeta(withoutLast));
     expect(await adapter.load(doc.id)).toEqual(withoutLast);
     await adapter.deletePages(doc.id, [doc.pages[2]!.id]);
     expect(await adapter.load(doc.id)).toEqual(withoutLast);
   });
 
-  it("acusa STORAGE_CORRUPTED se faltar uma página listada", async () => {
+  it("reports STORAGE_CORRUPTED if a listed page is missing", async () => {
     const adapter = make();
     const doc = sampleDoc();
     await saveWhole(adapter, doc);
@@ -68,7 +68,7 @@ describe.each(adapters)("adaptador de %s", (_name, make) => {
     await expect(adapter.load(doc.id)).rejects.toMatchObject({ code: "STORAGE_CORRUPTED" });
   });
 
-  it("deleteDocument remove meta e páginas, sem afetar outros documentos", async () => {
+  it("deleteDocument removes meta and pages without affecting other documents", async () => {
     const adapter = make();
     const one = sampleDoc();
     const two = sampleDoc();
@@ -80,7 +80,7 @@ describe.each(adapters)("adaptador de %s", (_name, make) => {
     expect(await adapter.list()).toEqual([two.id]);
   });
 
-  it("o que foi gravado não muda se o objeto original for alterado depois", async () => {
+  it("what was stored does not change if the original object is mutated later", async () => {
     const adapter = make();
     const doc = sampleDoc();
     await saveWhole(adapter, doc);
@@ -91,12 +91,12 @@ describe.each(adapters)("adaptador de %s", (_name, make) => {
 });
 
 describe("IndexedDbStorageAdapter", () => {
-  it("sem IndexedDB no ambiente, rejeita com STORAGE_UNAVAILABLE (sem quebrar no import)", async () => {
+  it("without IndexedDB in the environment, rejects with STORAGE_UNAVAILABLE (without breaking on import)", async () => {
     const adapter = new IndexedDbStorageAdapter({ indexedDB: undefined });
     await expect(adapter.list()).rejects.toMatchObject({ code: "STORAGE_UNAVAILABLE" });
   });
 
-  it("dados persistem entre instâncias (mesmo banco)", async () => {
+  it("data persists across instances (same database)", async () => {
     const factory = new IDBFactory();
     const doc = sampleDoc();
     const first = new IndexedDbStorageAdapter({ indexedDB: factory });

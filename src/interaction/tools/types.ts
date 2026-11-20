@@ -9,11 +9,11 @@ export type ToolName = "pen" | "eraser" | "pan";
 
 export interface ToolSettings {
   readonly pen: StrokeStyle;
-  /** Diâmetro da borracha em pixels de TELA (mesma sensação em qualquer zoom). */
+  /** Eraser diameter in SCREEN pixels (same feel at any zoom). */
   readonly eraserSize: number;
 }
 
-/** O que uma ferramenta pode usar. As ferramentas nunca calculam transformações por conta própria. */
+/** What a tool may use. Tools never compute transforms on their own. */
 export interface ToolContext {
   readonly store: PaperStore;
   readonly limits: PaperLimits;
@@ -21,21 +21,21 @@ export interface ToolContext {
   getTransform(): ViewTransform;
   getSettings(): ToolSettings;
   setLiveStroke(live: LiveStroke | null): void;
-  /** Mostra uma versão provisória da página (efeito da borracha antes de confirmar). `null` volta ao store. */
+  /** Shows a provisional version of the page (the eraser effect before committing). `null` goes back to the store. */
   setPreviewPage(page: PaperPage | null): void;
   setEraserCursor(cursor: EraserCursor | null): void;
-  /** Move o viewport em pixels de tela. */
+  /** Moves the viewport in screen pixels. */
   panBy(dx: number, dy: number): void;
 }
 
 /**
- * Ciclo de vida de um gesto:
- * `begin` → `move`* → `end` (confirma) ou `cancel` (descarta).
+ * Gesture lifecycle:
+ * `begin` → `move`* → `end` (commit) or `cancel` (discard).
  */
 export interface Tool {
   readonly name: ToolName;
   begin(sample: InputSample): void;
-  /** Recebe todas as amostras desde o último evento (inclui eventos coalescidos). */
+  /** Receives every sample since the last event (including coalesced events). */
   move(samples: readonly InputSample[]): void;
   end(): void;
   cancel(): void;
